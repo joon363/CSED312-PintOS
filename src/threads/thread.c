@@ -209,11 +209,10 @@ thread_create (const char *name, int priority,
    used for list_insert_ordered function at list.c in order to
    make thread ready list sorted.
 */
-bool thread_priority_compare_ASC(const struct list_elem *a,const struct list_elem *b,void *aux){
-  return list_entry(a, struct thread, elem)->priority < list_entry (b, struct thread, elem)->priority;
-}
-bool thread_priority_compare_DESC(const struct list_elem *a,const struct list_elem *b,void *aux){
-  return list_entry(a, struct thread, elem)->priority > list_entry (b, struct thread, elem)->priority;
+bool thread_priority_compare(const struct list_elem *a,const struct list_elem *b,void *asc){
+  int isASC = *(int *) asc;
+  bool less = list_entry(a, struct thread, elem)->priority < list_entry (b, struct thread, elem)->priority;
+  return  (isASC==1) ? less : !less;
 }
 
 
@@ -221,9 +220,12 @@ bool thread_priority_compare_DESC(const struct list_elem *a,const struct list_el
    the CPU if it no longer has the highest priority
 */
 void thread_priority_change_check(){
-  if (list_empty (&ready_list)) return;
-  else if(thread_current ()->priority < list_entry (list_front (&ready_list), struct thread, elem)->priority)
+  if (list_empty (&ready_list)) {
+    return;
+  }
+  else if(thread_current ()->priority < list_entry(list_front(&ready_list), struct thread, elem)->priority){
     thread_yield ();
+  }
   return;
 }
 
@@ -260,7 +262,7 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_insert_ordered (&ready_list, &t->elem, thread_priority_compare_DESC,0);
+  list_insert_ordered (&ready_list, &t->elem, thread_priority_compare,0);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -331,7 +333,7 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-    list_insert_ordered (&ready_list, &cur->elem, thread_priority_compare_DESC, 0);
+    list_insert_ordered (&ready_list, &cur->elem, thread_priority_compare, 0);
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);

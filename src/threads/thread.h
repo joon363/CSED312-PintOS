@@ -119,8 +119,7 @@ void thread_print_stats (void);
 typedef void thread_func (void *aux);
 tid_t thread_create (const char *name, int priority, thread_func *, void *);
 
-bool thread_priority_compare_ASC(const struct list_elem *a,const struct list_elem *b,void *aux);
-bool thread_priority_compare_DESC(const struct list_elem *a,const struct list_elem *b,void *aux);
+bool thread_priority_compare(const struct list_elem *a,const struct list_elem *b,void *asc);
 void thread_block (void);
 void thread_unblock (struct thread *);
 
