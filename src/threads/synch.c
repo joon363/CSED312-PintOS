@@ -257,6 +257,23 @@ struct semaphore_elem
     struct list_elem elem;              /* List element. */
     struct semaphore semaphore;         /* This semaphore. */
   };
+/* get thread with highest priority given semaphore.  
+*/
+struct thread* get_highest_thread_of_semaphore(const struct list_elem* semaphore_list){
+  struct semaphore_elem* sema_elem = list_entry(semaphore_list, struct semaphore_elem, elem);
+  struct list* thread_waiters = &(sema_elem->semaphore.waiters);
+  struct list_elem* highest_thread_elem= list_max(thread_waiters, thread_priority_compare,1);
+  struct thread* highest_thread = list_entry(highest_thread_elem, struct thread, elem);
+  return highest_thread;
+}
+
+/*Compare two semaphores' priority, return lower(asc) higher(desc) one.
+*/
+bool sema_priority_compare(const struct list_elem *a,const struct list_elem *b,void *asc){
+  int isASC = *(int *) asc;
+  bool less = get_highest_thread_of_semaphore(a)->priority < get_highest_thread_of_semaphore(b)->priority;
+  return  (isASC==1) ? less : !less;
+}
 
 /* Initializes condition variable COND.  A condition variable
    allows one piece of code to signal a condition and cooperating
@@ -300,7 +317,8 @@ cond_wait (struct condition *cond, struct lock *lock)
   ASSERT (lock_held_by_current_thread (lock));
   
   sema_init (&waiter.semaphore, 0);
-  list_push_back (&cond->waiters, &waiter.elem);
+  int isASC = 0;
+  list_insert_ordered (&cond->waiters, &waiter.elem, sema_priority_compare, &isASC);
   lock_release (lock);
   sema_down (&waiter.semaphore);
   lock_acquire (lock);
@@ -321,9 +339,12 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED)
   ASSERT (!intr_context ());
   ASSERT (lock_held_by_current_thread (lock));
 
-  if (!list_empty (&cond->waiters)) 
-    sema_up (&list_entry (list_pop_front (&cond->waiters),
-                          struct semaphore_elem, elem)->semaphore);
+  if (!list_empty (&cond->waiters)) {
+  int isASC = 1;
+    struct list_elem* highest_sema = list_max(&cond->waiters,sema_priority_compare,&isASC);
+    list_remove(highest_sema);
+    sema_up (&list_entry (highest_sema,struct semaphore_elem, elem)->semaphore);
+  }
 }
 
 /* Wakes up all threads, if any, waiting on COND (protected by
