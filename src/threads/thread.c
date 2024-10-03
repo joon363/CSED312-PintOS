@@ -217,7 +217,7 @@ bool thread_compare(struct list_elem* t1, struct list_elem* t2, void *aux UNUSED
    the CPU if it no longer has the highest priority
 */
 void thread_priority_change_check(){
-  if (!list_empty (&ready_list)) return;
+  if (list_empty (&ready_list)) return;
   else if(thread_current ()->priority < list_entry (list_front (&ready_list), struct thread, elem)->priority)
     thread_yield ();
   return;
