@@ -205,13 +205,17 @@ thread_create (const char *name, int priority,
   return tid;
 }
 
-/* Compare two threads' priority, return higher one.
+/* Compare two threads' priority, return lower(asc) higher(desc) one.
    used for list_insert_ordered function at list.c in order to
    make thread ready list sorted.
 */
-bool thread_compare(struct list_elem* t1, struct list_elem* t2, void *aux UNUSED){
-  return list_entry(t1, struct thread, elem)->priority > list_entry (t2, struct thread, elem)->priority;
+bool thread_priority_compare_ASC(const struct list_elem *a,const struct list_elem *b,void *aux){
+  return list_entry(a, struct thread, elem)->priority < list_entry (b, struct thread, elem)->priority;
 }
+bool thread_priority_compare_DESC(const struct list_elem *a,const struct list_elem *b,void *aux){
+  return list_entry(a, struct thread, elem)->priority > list_entry (b, struct thread, elem)->priority;
+}
+
 
 /* When thread's priority changed, it should immediately yield 
    the CPU if it no longer has the highest priority
@@ -256,7 +260,7 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_insert_ordered (&ready_list, &t->elem, thread_compare,0);
+  list_insert_ordered (&ready_list, &t->elem, thread_priority_compare_DESC,0);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -327,7 +331,7 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-    list_insert_ordered (&ready_list, &cur->elem, thread_compare, 0);
+    list_insert_ordered (&ready_list, &cur->elem, thread_priority_compare_DESC, 0);
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
