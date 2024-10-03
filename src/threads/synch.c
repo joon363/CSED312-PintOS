@@ -68,7 +68,8 @@ sema_down (struct semaphore *sema)
   old_level = intr_disable ();
   while (sema->value == 0) 
     {
-      list_insert_ordered (&sema->waiters, &thread_current ()->elem,thread_priority_compare_DESC,0);
+      int isASC = 0;
+      list_insert_ordered (&sema->waiters, &thread_current ()->elem,thread_priority_compare,&isASC);
       thread_block ();
     }
   sema->value--;
@@ -114,7 +115,8 @@ sema_up (struct semaphore *sema)
 
   old_level = intr_disable ();
   if (!list_empty (&sema->waiters)) {
-    struct list_elem *highest_thread = list_max(&sema->waiters,thread_priority_compare_ASC,0);
+    int isASC = 1;
+    struct list_elem *highest_thread = list_max(&sema->waiters,thread_priority_compare,&isASC);
     list_remove(highest_thread);
     thread_unblock (list_entry (highest_thread,struct thread, elem));
   }

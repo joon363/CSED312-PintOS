@@ -33,7 +33,7 @@ static void real_time_delay (int64_t num, int32_t denom);
 /* List of sleeping threads */
 static struct list sleep_list;
 /* Compare wake-up time between sleeping threads */
-static bool is_less(struct list_elem* a, struct list_elem* b, void *aux UNUSED);
+static bool is_less(const struct list_elem* a, const struct list_elem* b, void *aux UNUSED);
 
 /* Sets up the timer to interrupt TIMER_FREQ times per second,
    and registers the corresponding interrupt. */
@@ -117,7 +117,7 @@ timer_sleep (int64_t ticks)
 
 /* Compares wake up time between sleeping threads in the list */
 static bool
-is_less(struct list_elem* a, struct list_elem* b, void *aux UNUSED) {
+is_less(const struct list_elem* a, const struct list_elem* b, void *aux UNUSED) {
   struct thread *t1 = list_entry(a, struct thread, elem);
   struct thread *t2 = list_entry(b, struct thread, elem);
   return t1->wake_up_time < t2->wake_up_time;
