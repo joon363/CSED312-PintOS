@@ -24,6 +24,10 @@ typedef int tid_t;
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
 
+#define RECENT_CPU_DEFAULT 0
+#define NICE_DEFAULT 0
+#define LOAD_AVG_DEFAULT 0
+
 /* A kernel thread or user process.
 
    Each thread structure is stored in its own 4 kB page.  The
@@ -103,6 +107,10 @@ struct thread
 
     /* Managed by devices/timer.c */
     int64_t wake_up_time;               /* Time to wake up */
+
+    /* Managed by thread.c */
+    int recent_cpu;                     /* Recent cpu usage */
+    int nice;                           /* Nice */
   };
 
 /* If false (default), use round-robin scheduler.
@@ -137,6 +145,12 @@ void thread_foreach (thread_action_func *, void *);
 int thread_get_priority (void);
 void thread_set_priority (int);
 void thread_priority_change_check(void);
+
+void thread_mlfqs_priority(struct thread *);
+void thread_mlfqs_refresh_priority(void);
+void thread_mlfqs_recent_cpu(struct thread *);
+void thread_mlfqs_increment_recent_cpu(void);
+void thread_mlfqs_load_avg(void);
 
 int thread_get_nice (void);
 void thread_set_nice (int);
