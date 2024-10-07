@@ -20,22 +20,22 @@ int FTOI_ROUND(int x) {
 }
 
 // Add x and y:	                                  x + y
-int ADD_II(int x, int y) {
+int ADD(int x, int y) {
   return x + y;
 }
 
 // Subtract y from x:	                            x - y
-int SUB_II(int x, int y) {
+int SUB(int x, int y) {
   return x - y;
 }
 
 // Add x and n:	                                  x + n * f
-int ADD_IF(int x, int n) {
+int ADD_FI(int x, int n) {
   return x + n * F;
 }
 
 // Subtract n from x:	                            x - n * f
-int SUB_IF(int x, int n) {
+int SUB_FI(int x, int n) {
   return x - n * F;
 }
 
@@ -45,7 +45,7 @@ int MUL_II(int x, int y) {
 }
 
 // Multiply x by n:	                              x * n
-int MUL_IF(int x, int n) {
+int MUL(int x, int n) {
   return x * n;
 }
 
@@ -55,6 +55,6 @@ int DIV_II(int x, int y) {
 }
 
 // Divide x by n:	                                x / n
-int DIV_IF(int x, int n) {
+int DIV(int x, int n) {
   return x / n;
 }

@@ -387,7 +387,8 @@ void
 thread_mlfqs_priority(struct thread *t) {
   /* Do not calculate priority of an idle thread. */
   if (t == idle_thread) return;
-  t->priority = -1; // USE FP !!!
+  /* priority = PRI_MAX - (recent_cpu / 4) - (nice * 2) */
+  t->priority = PRI_MAX - FTOI(DIV(t->recent_cpu, 4)) - (t->nice * 2);
 }
 
 /* Refreshes threads' prioirity. Will be called every 4 ticks. */
@@ -405,16 +406,17 @@ void
 thread_mlfqs_recent_cpu(struct thread *t) {
   /* Do not calculate recent_cpu of an idle thread. */
   if (t == idle_thread) return;
-  t->recent_cpu = -1; // USE FP !!!
+  /* recent_cpu = (2 * load_avg) / (2 * load_avg + 1) * recent_cpu + nice */
+  t->recent_cpu = ADD_FI( MUL( DIV( MUL(load_avg, 2), ADD_FI(MUL(load_avg, 2), 1) ), t->recent_cpu ), t->nice );
 }
 
 /* Increments the current thread's recent_cpu value by 1. */
 void
 thread_mlfqs_increment_recent_cpu(void) {
-  struct thread *t = thread_current();
+  struct thread *cur = thread_current();
   /* Do not increment recent_cpu of an idle thread. */
-  if (t == idle_thread) return;
-  t->recent_cpu = -1; // USE FP !!!
+  if (cur == idle_thread) return;
+  cur->recent_cpu = ADD_FI(cur->recent_cpu, 1);
 }
 
 /* Sets the system's load_avg value. */
@@ -422,7 +424,8 @@ void
 thread_mlfqs_load_avg(void)
 {
   int ready_threads = list_size(&ready_list) + (thread_current() != idle_thread); // +1 if current thread is not idle
-  load_avg = -1; // USE FP !!!
+  /* load_avg = (59/60) * load_avg + (1/60) * ready_threads */
+  load_avg = ADD( DIV( MUL(load_avg, 59), 60 ), DIV( ITOF(ready_threads), 60 ) );
 }
 
 /* Sets the current thread's nice value to NICE. */
@@ -432,7 +435,7 @@ thread_set_nice (int nice)
   enum intr_level old_level = intr_disable();
   struct thread *cur = thread_current();
   cur->nice = nice;
-  mlfqs_calculate_priority(cur);
+  thread_mlfqs_priority(cur);
   intr_set_level(old_level);
 }
 
@@ -440,21 +443,30 @@ thread_set_nice (int nice)
 int
 thread_get_nice (void) 
 {
-  /* IMPLEMENTATION */
+  enum intr_level old_level = intr_disable();
+  int _nice = thread_current()->nice;
+  intr_set_level(old_level);
+  return _nice;
 }
 
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void) 
 {
-  /* IMPLEMENTATION */
+  enum intr_level old_level = intr_disable();
+  int _load_avg = FTOI(MUL(load_avg, 100));
+  intr_set_level(old_level);
+  return _load_avg;
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void) 
 {
-  /* IMPLEMENTATION */
+  enum intr_level old_level = intr_disable();
+  int _recent_cpu = FTOI(MUL(thread_current()->recent_cpu, 100));
+  intr_set_level(old_level);
+  return _recent_cpu;
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
