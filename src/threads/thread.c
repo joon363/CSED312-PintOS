@@ -15,7 +15,7 @@
 #include "userprog/process.h"
 #endif
 
-#include "threads/fixed-point.h"
+#include "fixed-point.h"
 
 /* Random value for struct thread's `magic' member.
    Used to detect stack overflow.  See the big comment at the top
@@ -96,6 +96,9 @@ thread_init (void)
   list_init (&ready_list);
   list_init (&all_list);
 
+  /* Initialize load_avg */
+  load_avg = LOAD_AVG_DEFAULT;
+  
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
   init_thread (initial_thread, "main", PRI_DEFAULT);
@@ -112,9 +115,6 @@ thread_start (void)
   struct semaphore idle_started;
   sema_init (&idle_started, 0);
   thread_create ("idle", PRI_MIN, idle, &idle_started);
-
-  /* Initialize load_avg */
-  load_avg = LOAD_AVG_DEFAULT;
 
   /* Start preemptive thread scheduling. */
   intr_enable ();
@@ -389,11 +389,13 @@ thread_mlfqs_priority(struct thread *t) {
   if (t == idle_thread) return;
   /* priority = PRI_MAX - (recent_cpu / 4) - (nice * 2) */
   t->priority = PRI_MAX - FTOI(DIV(t->recent_cpu, 4)) - (t->nice * 2);
+  if (t->priority < PRI_MIN) t->priority = PRI_MIN;
+  else if (t->priority > PRI_MAX) t->priority = PRI_MAX;
 }
 
 /* Refreshes threads' prioirity. Will be called every 4 ticks. */
 void
-thread_mlfqs_refresh_priority(void  ) {
+thread_mlfqs_refresh_priority(void) {
   struct list_elem *e;
   for (e = list_begin(&all_list); e != list_end(&all_list); e = list_next(e)) {
     struct thread *t = list_entry(e, struct thread, allelem);
@@ -410,7 +412,17 @@ thread_mlfqs_recent_cpu(struct thread *t) {
   t->recent_cpu = ADD_FI( MUL( DIV( MUL(load_avg, 2), ADD_FI(MUL(load_avg, 2), 1) ), t->recent_cpu ), t->nice );
 }
 
-/* Increments the current thread's recent_cpu value by 1. */
+/* Refreshes threads' recent_cpu. Will be called every second. */
+void
+thread_mlfqs_refresh_recent_cpu(void) {
+  struct list_elem *e;
+  for (e = list_begin(&all_list); e != list_end(&all_list); e = list_next(e)) {
+    struct thread *t = list_entry(e, struct thread, allelem);
+    thread_mlfqs_recent_cpu(t);
+  }
+}
+
+/* Increments the current thread's recent_cpu value by 1. Will be called every tick. */
 void
 thread_mlfqs_increment_recent_cpu(void) {
   struct thread *cur = thread_current();
@@ -558,8 +570,16 @@ init_thread (struct thread *t, const char *name, int priority)
   t->magic = THREAD_MAGIC;
 
   /* Initialize recent_cpu and nice */
-  t->recent_cpu = RECENT_CPU_DEFAULT;
-  t->nice = NICE_DEFAULT;
+  if (thread_mlfqs) {
+    if (t == initial_thread) {
+      t->recent_cpu = 0;
+      t->nice = 0;
+    } else {
+      t->recent_cpu = thread_current()->recent_cpu;
+      t->nice = thread_current()->nice;
+    }
+    thread_mlfqs_priority(t);
+  }
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);

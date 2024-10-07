@@ -1,5 +1,17 @@
 #define F (1 << 14)
 
+int ITOF(int);
+int FTOI(int);
+int FTOI_ROUND(int);
+int ADD(int, int);
+int SUB(int, int);
+int ADD_FI(int, int);
+int SUB_FI(int, int);
+int MUL_II(int, int);
+int MUL(int, int);
+int DIV_II(int, int);
+int DIV(int, int);
+
 // Convert n to fixed point:	                    n * f
 int ITOF(int n) {
   return n * F;

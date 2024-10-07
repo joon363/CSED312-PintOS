@@ -149,6 +149,7 @@ void thread_priority_change_check(void);
 void thread_mlfqs_priority(struct thread *);
 void thread_mlfqs_refresh_priority(void);
 void thread_mlfqs_recent_cpu(struct thread *);
+void thread_mlfqs_refresh_recent_cpu(void);
 void thread_mlfqs_increment_recent_cpu(void);
 void thread_mlfqs_load_avg(void);
 

@@ -209,7 +209,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
     }
     /* Update recent_cpu and load_avg per second. */
     if (ticks % TIMER_FREQ == 0) {
-      thread_mlfqs_recent_cpu(thread_current());
+      thread_mlfqs_refresh_recent_cpu();
       thread_mlfqs_load_avg();
     }
   }
