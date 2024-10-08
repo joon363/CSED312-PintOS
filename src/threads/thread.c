@@ -200,7 +200,7 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock (t);
-  thread_priority_change_check();
+  thread_priority_change_list_check();
 
   return tid;
 }
@@ -224,7 +224,15 @@ bool thread_donation_elem_priority_compare(const struct list_elem *a,const struc
    1. check its donation list, change priority to hightest value
    2. it should immediately yield the CPU if it no longer has the highest priority
 */
-void thread_donation_list_check(){
+void thread_priority_change_check(){
+  thread_priority_change_donation_list_check();
+  thread_priority_change_list_check();
+}
+
+/* check its donation list, change priority to hightest value
+   called at : lock_release, set_priority
+*/
+void thread_priority_change_donation_list_check(){
   struct thread *cur = thread_current ();
 
   cur->priority = cur->priority_backup;
@@ -237,7 +245,10 @@ void thread_donation_list_check(){
   }
 }
 
-void thread_list_check(){
+/* immediately yield the CPU if it no longer has the highest priority
+   called at : thread_create, sema_up, set_priority
+*/
+void thread_priority_change_list_check(){
   if (list_empty (&ready_list)) {
     return;
   }
@@ -245,10 +256,6 @@ void thread_list_check(){
     thread_yield ();
   }
   return;
-}
-void thread_priority_change_check(){
-  thread_donation_list_check();
-  thread_list_check();
 }
 
 /* Puts the current thread to sleep.  It will not be scheduled
