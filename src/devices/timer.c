@@ -200,6 +200,20 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
 
+  if (thread_mlfqs) {
+    /* Increment recent_cpu by one every tick. */
+    thread_mlfqs_increment_recent_cpu();
+    /* Refresh threads’ priority per 4 timer ticks. */  
+    if (ticks % 4 == 0) {
+      thread_mlfqs_refresh_priority();
+    }
+    /* Update recent_cpu and load_avg per second. */
+    if (ticks % TIMER_FREQ == 0) {
+      thread_mlfqs_refresh_recent_cpu();
+      thread_mlfqs_load_avg();
+    }
+  }
+
   /* Wake up sleeping threads if needed */
   while (!list_empty(&sleep_list)) {
     struct thread *t = list_entry(list_front(&sleep_list), struct thread, elem);
