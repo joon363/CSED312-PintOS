@@ -88,10 +88,15 @@ struct thread
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
+    int priority_backup;                /* Priority backup for priority donation logic. */
     struct list_elem allelem;           /* List element for all threads list. */
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
+
+    struct list donations;              /* Donation List. */
+    struct list_elem donation_elem;     /* Donation List Element */
+    struct lock* waiting_lock;          /* Lock information for priority donation*/
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
@@ -119,7 +124,8 @@ void thread_print_stats (void);
 typedef void thread_func (void *aux);
 tid_t thread_create (const char *name, int priority, thread_func *, void *);
 
-bool thread_priority_compare(const struct list_elem *a,const struct list_elem *b,void *asc);
+bool thread_elem_priority_compare(const struct list_elem *a,const struct list_elem *b,void *asc);
+bool thread_donation_elem_priority_compare(const struct list_elem *a,const struct list_elem *b,void *asc);
 void thread_block (void);
 void thread_unblock (struct thread *);
 
@@ -137,6 +143,8 @@ void thread_foreach (thread_action_func *, void *);
 int thread_get_priority (void);
 void thread_set_priority (int);
 void thread_priority_change_check(void);
+void thread_donation_list_check(void);
+void thread_list_check(void);
 
 int thread_get_nice (void);
 void thread_set_nice (int);

@@ -209,17 +209,39 @@ thread_create (const char *name, int priority,
    used for list_insert_ordered function at list.c in order to
    make thread ready list sorted.
 */
-bool thread_priority_compare(const struct list_elem *a,const struct list_elem *b,void *asc){
+bool thread_elem_priority_compare(const struct list_elem *a,const struct list_elem *b,void *asc){
   int isASC = *(int *) asc;
   bool less = list_entry(a, struct thread, elem)->priority < list_entry (b, struct thread, elem)->priority;
   return  (isASC==1) ? less : !less;
 }
-
-
-/* When thread's priority changed, it should immediately yield 
-   the CPU if it no longer has the highest priority
+/* Compare two threads' priority for donation List
+   distinct with list because it compares donation_elem, not elem.
 */
-void thread_priority_change_check(){
+bool thread_donation_elem_priority_compare(const struct list_elem *a,const struct list_elem *b,void *asc){
+  int isASC = *(int *) asc;
+  bool less = list_entry(a, struct thread, donation_elem)->priority < list_entry (b, struct thread, donation_elem)->priority;
+  return  (isASC==1) ? less : !less;
+}
+
+
+/* When thread's priority changed, 
+   1. check its donation list, change priority to hightest value
+   2. it should immediately yield the CPU if it no longer has the highest priority
+*/
+void thread_donation_list_check(){
+  struct thread *cur = thread_current ();
+  int isASC=1;
+
+  cur->priority = cur->priority_backup;
+  
+  // multiple donation check
+  if (!list_empty (&cur->donations)) {    
+    struct thread *highest_thread = list_entry (list_front(&cur->donations), struct thread, donation_elem);
+    if (highest_thread->priority > cur->priority)
+      cur->priority = highest_thread->priority;
+  }
+}
+void thread_list_check(){
   if (list_empty (&ready_list)) {
     return;
   }
@@ -227,6 +249,10 @@ void thread_priority_change_check(){
     thread_yield ();
   }
   return;
+}
+void thread_priority_change_check(){
+  thread_donation_list_check();
+  thread_list_check();
 }
 
 /* Puts the current thread to sleep.  It will not be scheduled
@@ -263,7 +289,7 @@ thread_unblock (struct thread *t)
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
   int isASC = 0;
-  list_insert_ordered (&ready_list, &t->elem, thread_priority_compare,&isASC);
+  list_insert_ordered (&ready_list, &t->elem, thread_elem_priority_compare,&isASC);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -335,7 +361,7 @@ thread_yield (void)
   old_level = intr_disable ();
   if (cur != idle_thread) {
     int isASC = 0;
-    list_insert_ordered (&ready_list, &cur->elem, thread_priority_compare, &isASC);
+    list_insert_ordered (&ready_list, &cur->elem, thread_elem_priority_compare, &isASC);
   }
   cur->status = THREAD_READY;
   schedule ();
@@ -363,7 +389,7 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
-  thread_current ()->priority = new_priority;
+  thread_current ()->priority_backup = new_priority;
   thread_priority_change_check();
 }
 
@@ -491,7 +517,10 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
+  t->priority_backup = priority;
   t->magic = THREAD_MAGIC;
+  t->waiting_lock = NULL;
+  list_init(&t->donations);
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
