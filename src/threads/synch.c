@@ -68,7 +68,7 @@ sema_down (struct semaphore *sema)
   old_level = intr_disable ();
   while (sema->value == 0) 
     {
-      list_insert_ordered (&sema->waiters, &thread_current ()->elem,thread_elem_priority_compare,NULL);
+      list_insert_ordered (&sema->waiters, &thread_current()->elem, thread_elem_priority_compare, NULL);
       thread_block ();
     }
   sema->value--;
@@ -211,13 +211,16 @@ priority_donation(struct thread* current_thread, struct lock* lock){
   int depth=0;
   struct thread* cursor = current_thread;
 
-  
   current_thread->waiting_lock = lock;
   list_insert_ordered (&lock->holder->donations, &current_thread->donation_elem, 
     			thread_donation_elem_priority_compare, NULL);
   
   // nested priority donation
   while ((depth < 8) && (cursor ->waiting_lock != NULL)){
+    int holder_priority = cursor->waiting_lock->holder->priority;
+    int donator_priority = cursor->priority;
+    ASSERT(holder_priority <= donator_priority);
+
     cursor->waiting_lock->holder->priority = cursor->priority;
     cursor = cursor->waiting_lock->holder;
     depth++;
@@ -288,18 +291,16 @@ struct semaphore_elem
   };
 /* get thread with highest priority given semaphore.  
 */
-struct thread* get_highest_thread_of_semaphore(const struct list_elem* semaphore_list){
-  struct semaphore_elem* sema_elem = list_entry(semaphore_list, struct semaphore_elem, elem);
-  struct list* thread_waiters = &(sema_elem->semaphore.waiters);
-  list_sort (thread_waiters, thread_elem_priority_compare, NULL);
+int get_highest_priority_of_semaphore(const struct list_elem* sema_elem){
+  struct list* thread_waiters = &(list_entry(sema_elem, struct semaphore_elem, elem)->semaphore.waiters);
   struct thread* highest_thread = list_entry(list_begin(thread_waiters), struct thread, elem);
-  return highest_thread;
+  return highest_thread->priority;
 }
 
 /*Compare two semaphores' priority, return lower(asc) higher(desc) one.
 */
 bool sema_priority_compare(const struct list_elem *a,const struct list_elem *b,void *aux UNUSED){
-  return get_highest_thread_of_semaphore(a)->priority > get_highest_thread_of_semaphore(b)->priority;
+  return get_highest_priority_of_semaphore(a) > get_highest_priority_of_semaphore(b);
 }
 
 /* Initializes condition variable COND.  A condition variable

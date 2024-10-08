@@ -16,7 +16,7 @@ void sema_down (struct semaphore *);
 bool sema_try_down (struct semaphore *);
 void sema_up (struct semaphore *);
 void sema_self_test (void);
-struct thread* get_highest_thread_of_semaphore(const struct list_elem* semaphore_list);
+int get_highest_priority_of_semaphore(const struct list_elem* semaphore_list);
 bool sema_priority_compare(const struct list_elem *a,const struct list_elem *b,void *asc);
 
 /* Lock. */
