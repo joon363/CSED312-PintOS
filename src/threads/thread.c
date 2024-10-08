@@ -475,6 +475,7 @@ thread_set_nice (int nice)
   struct thread *cur = thread_current();
   cur->nice = nice;
   thread_mlfqs_priority(cur);
+  thread_priority_change_list_check();
   intr_set_level(old_level);
 }
 

@@ -198,7 +198,7 @@ lock_acquire (struct lock *lock)
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
 
-  if(lock->holder !=NULL) 
+  if((lock->holder !=NULL) && thread_mlfqs==false) 
     priority_donation(thread_current(), lock);
 
   sema_down (&lock->semaphore);
@@ -258,6 +258,12 @@ lock_release (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
 
+  if(thread_mlfqs==true){
+    lock->holder = NULL;
+    sema_up (&lock->semaphore);
+    return;
+  }
+
   struct list_elem* it;
   struct list* donation_list = &thread_current()->donations;
   for (it = list_begin (donation_list); it != list_end (donation_list); it = list_next (it)){
@@ -267,7 +273,6 @@ lock_release (struct lock *lock)
   }
   
   thread_priority_change_donation_list_check();
-
   lock->holder = NULL;
   sema_up (&lock->semaphore);
 }
