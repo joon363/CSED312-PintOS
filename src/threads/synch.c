@@ -258,11 +258,8 @@ lock_release (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
 
-<<<<<<< HEAD
-  if(thread_mlfqs==true){
-=======
+
   if (thread_mlfqs) {
->>>>>>> 9b816931c049e5dbab53a1de43c12887cadb4acd
     lock->holder = NULL;
     sema_up (&lock->semaphore);
     return;
