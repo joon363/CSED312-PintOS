@@ -464,7 +464,7 @@ thread_mlfqs_load_avg(void)
 {
   int ready_threads = list_size(&ready_list) + (thread_current() != idle_thread); // +1 if current thread is not idle
   /* load_avg = (59/60) * load_avg + (1/60) * ready_threads */
-  load_avg = ADD( DIV( MUL(load_avg, 59), 60 ), DIV( ITOF(ready_threads), 60 ) );
+  load_avg = DIV(ADD_FI(MUL(load_avg, 59), ready_threads), 60);
 }
 
 /* Sets the current thread's nice value to NICE. */
