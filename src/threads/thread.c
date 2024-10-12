@@ -226,15 +226,6 @@ bool thread_donation_elem_priority_compare(const struct list_elem *a,const struc
 }
 
 
-/* When thread's priority changed, 
-   1. check its donation list, change priority to hightest value
-   2. it should immediately yield the CPU if it no longer has the highest priority
-*/
-void thread_priority_change_check(){
-  thread_priority_change_donation_list_check();
-  thread_priority_change_list_check();
-}
-
 /* check its donation list, change priority to hightest value
    called at : lock_release, set_priority
 */
@@ -399,7 +390,8 @@ thread_set_priority (int new_priority)
   if (thread_mlfqs) return;
 
   thread_current ()->priority_backup = new_priority;
-  thread_priority_change_check();
+  thread_priority_change_donation_list_check();
+  thread_priority_change_list_check();
 }
 
 /* Returns the current thread's priority. */

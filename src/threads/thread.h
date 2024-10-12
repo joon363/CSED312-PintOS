@@ -150,7 +150,6 @@ void thread_foreach (thread_action_func *, void *);
 
 int thread_get_priority (void);
 void thread_set_priority (int);
-void thread_priority_change_check(void);
 void thread_priority_change_donation_list_check(void);
 void thread_priority_change_list_check(void);
 
