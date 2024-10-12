@@ -450,6 +450,13 @@ thread_mlfqs_increment_recent_cpu(void) {
   cur->recent_cpu = ADD_FI(cur->recent_cpu, 1);
 }
 
+/* Sort ready_list */
+void
+thread_mlfqs_refresh_ready_list(void) {
+  list_sort (&ready_list, thread_elem_priority_compare,NULL);
+}
+
+
 /* Sets the system's load_avg value. */
 void 
 thread_mlfqs_load_avg(void)
@@ -467,8 +474,8 @@ thread_set_nice (int nice)
   struct thread *cur = thread_current();
   cur->nice = nice;
   thread_mlfqs_priority(cur);
-  // thread_priority_change_list_check();
-  thread_yield(); // reschedule
+  thread_priority_change_list_check();
+  //thread_yield(); // reschedule
   intr_set_level(old_level);
 }
 
@@ -487,7 +494,7 @@ int
 thread_get_load_avg (void) 
 {
   enum intr_level old_level = intr_disable();
-  int _load_avg = FTOI(MUL(load_avg, 100));
+  int _load_avg = FTOI_ROUND(MUL(load_avg, 100));
   intr_set_level(old_level);
   return _load_avg;
 }
@@ -497,7 +504,7 @@ int
 thread_get_recent_cpu (void) 
 {
   enum intr_level old_level = intr_disable();
-  int _recent_cpu = FTOI(MUL(thread_current()->recent_cpu, 100));
+  int _recent_cpu = FTOI_ROUND(MUL(thread_current()->recent_cpu, 100));
   intr_set_level(old_level);
   return _recent_cpu;
 }

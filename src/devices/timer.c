@@ -206,10 +206,11 @@ timer_interrupt (struct intr_frame *args UNUSED)
     /* Refresh threads’ priority per 4 timer ticks. */  
     if (ticks % 4 == 0) {
       thread_mlfqs_refresh_priority();
+      thread_mlfqs_refresh_ready_list();
       /* Update recent_cpu and load_avg per second. */
       if (ticks % TIMER_FREQ == 0) {
-        thread_mlfqs_refresh_recent_cpu();
         thread_mlfqs_load_avg();
+        thread_mlfqs_refresh_recent_cpu();
       }
     }
   }
