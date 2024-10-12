@@ -95,9 +95,6 @@ thread_init (void)
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
-
-  /* Initialize load_avg */
-  load_avg = LOAD_AVG_DEFAULT;
   
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -115,6 +112,9 @@ thread_start (void)
   struct semaphore idle_started;
   sema_init (&idle_started, 0);
   thread_create ("idle", PRI_MIN, idle, &idle_started);
+
+  /* Initialize load_avg */
+  load_avg = LOAD_AVG_DEFAULT;
 
   /* Start preemptive thread scheduling. */
   intr_enable ();
@@ -436,7 +436,7 @@ thread_mlfqs_recent_cpu(struct thread *t) {
   /* Do not calculate recent_cpu of an idle thread. */
   if (t == idle_thread) return;
   /* recent_cpu = (2 * load_avg) / (2 * load_avg + 1) * recent_cpu + nice */
-  t->recent_cpu = ADD_FI( MUL( DIV( MUL(load_avg, 2), ADD_FI(MUL(load_avg, 2), 1) ), t->recent_cpu ), t->nice );
+  t->recent_cpu = ADD_FI( MUL_II( DIV_II( MUL(load_avg, 2), ADD_FI(MUL(load_avg, 2), 1) ), t->recent_cpu ), t->nice );
 }
 
 /* Refreshes threads' recent_cpu. Will be called every second. */
@@ -604,8 +604,8 @@ init_thread (struct thread *t, const char *name, int priority)
   /* Initialize recent_cpu and nice */
   if (thread_mlfqs) {
     if (t == initial_thread) {
-      t->recent_cpu = 0;
-      t->nice = 0;
+      t->recent_cpu = RECENT_CPU_DEFAULT;
+      t->nice = NICE_DEFAULT;
     } else {
       t->recent_cpu = thread_current()->recent_cpu;
       t->nice = thread_current()->nice;
