@@ -250,7 +250,7 @@ void thread_priority_change_list_check(){
     return;
   }
   else if(thread_current ()->priority < list_entry(list_front(&ready_list), struct thread, elem)->priority){
-    thread_yield ();
+    if(!intr_context()) thread_yield ();
   }
   return;
 }
