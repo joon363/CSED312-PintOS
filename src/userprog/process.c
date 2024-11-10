@@ -45,6 +45,7 @@ process_execute (const char *file_name)
   return tid;
 }
 
+/* Setting stack for arguments according to calling convention. */
 void
 set_args_stack (char **argv, int argc, void **esp)
 {
@@ -86,22 +87,22 @@ set_args_stack (char **argv, int argc, void **esp)
   **(uint32_t **)esp = 0;
 }
 
+/* parse args by words, save at argv, 
+   return number of total arguments (argc). */
 int
 parse_args(char **argv, char* args){
-  /*parse by words
-  * use strtok_r to prevent any danger in multithreading environments
-  */
   char *token, *save_ptr;
   int argc = 0;
+
   token = strtok_r (args, " ", &save_ptr)
   while(token!=NULL){
     argv[argc] = token;
     argc++;
     /* Limit argument count to 127. see ISO C Standard*/
     ASSERT(argc<127);
-
     token = strtok_r (NULL, " ", &save_ptr)
   }
+  
   return argc;
 }
 
@@ -114,7 +115,7 @@ start_process (void *file_name_)
   struct intr_frame if_;
   bool success;
 
-  /* Parse Arguments*/
+  /* Parse Arguments */
   char **argv = palloc_get_page(0);
   argc= parse_args(argv, file_name);
 
@@ -125,7 +126,7 @@ start_process (void *file_name_)
   if_.eflags = FLAG_IF | FLAG_MBS;
   success = load (argv[0], &if_.eip, &if_.esp);
 
-  /* Set arguments stack*/
+  /* Set arguments stack */
   if(success) set_args_stack(argv, argc, &if_.esp);
   palloc_free_page (argv);
 
