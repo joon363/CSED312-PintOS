@@ -37,11 +37,19 @@ process_execute (const char *file_name)
   if (fn_copy == NULL)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
-
+  
+  char *token, *save_ptr;
+  token = strtok_r (file_name, " ", &save_ptr);
   /* Create a new thread to execute FILE_NAME. */
-  tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
-  if (tid == TID_ERROR)
+  tid = thread_create (token, PRI_DEFAULT, start_process, fn_copy);
+  /* The parent process cannot return from the exec until it 
+     knows whether the child process successfully loaded its executable. 
+     Thus, wait for child's execute_lock. this lock will be released at 
+     end of start_process. */
+  sema_down (&find_current_child(tid)->execute_lock);
+  if (tid == TID_ERROR){
     palloc_free_page (fn_copy); 
+  }
   return tid;
 }
 
@@ -129,9 +137,12 @@ start_process (void *file_name_)
   /* Set arguments stack */
   if(success) set_args_stack(argv, argc, &if_.esp);
   palloc_free_page (argv);
-
-  /* If load failed, quit. */
   palloc_free_page (file_name);
+  
+  /* Wake up parent waiting for loading. */
+  sema_up (&(thread_current ()->execute_lock));
+  
+  /* If load failed, quit. */
   if (!success) 
     thread_exit ();
 
@@ -157,7 +168,29 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-  return -1;
+  struct thread* child = find_current_child(child_tid);
+
+  /* wrong tid. */
+  if(child == NULL) 
+  {
+    return -1;
+  }
+
+  /* child has already exited. */
+  if(child->status == THREAD_DYING) 
+  {
+    return -1;
+  }
+
+  /* wait for exit, do not destroy thread yet. */
+  int retcode;
+  sema_down (&(child->child_lock));
+  retcode = child->exit_code;  
+  list_remove (&(child->child_elem));
+  
+  /* now safe to destroy thread. */
+  sema_up(&(child->exit_lock));
+  return retcode;
 }
 
 /* Free the current process's resources. */
@@ -183,6 +216,9 @@ process_exit (void)
       pagedir_activate (NULL);
       pagedir_destroy (pd);
     }
+  /* signal to waiting parent thread. sema_down at process_wait. */
+  sema_up (&(cur->child_lock));
+  sema_down (&(cur->exit_lock));
 }
 
 /* Sets up the CPU for running user code in the current

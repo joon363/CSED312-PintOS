@@ -131,3 +131,147 @@ syscall_handler (struct intr_frame *f UNUSED)
   }
 }
 
+/* syscall logic implementations. */
+
+/* call shutdown_power_off() from src/devices/shutdown.c. */
+void
+sys_halt (void)
+{
+  shutdown_power_off();
+}
+
+/* set exit code, call thread_exit(). */
+void
+sys_exit (int status)
+{
+  /* Problem 1: Process Termination Messages */
+  printf("%s: exit(%d)\n", thread_name(), status);
+  thread_current() -> exit_code = status;
+  thread_exit();
+}
+
+/* call process_execute from userprog/process.c.  */
+int
+sys_exec (const char *cmd_line)
+{
+  /* process_execute returns -1 if program fails for some reason. */
+  return process_execute (cmd_line);
+}
+
+/* Waits for a child process pid and retrieves the child's exit status. */
+int sys_wait(int pid)
+{
+  return process_wait (pid);
+}
+
+/*- Creates a new file called file initially initial_size bytes in size.
+    - Returns true if successful, false otherwise.
+    - Creating a new file does not open it: opening the new file is a 
+      separate operation which would require a `open` system call. */
+bool
+sys_create(const char *file, unsigned initial_size)
+{
+  {}
+}
+
+/* Deletes the file called file.
+  - Returns true if successful, false otherwise.
+  - A file may be removed regardless of whether it is open or closed, 
+    and removing an open file does not close it. */
+bool
+sys_remove (const char *file)
+{
+  {}
+}
+
+/* Opens the file called file.
+  - Returns a nonnegative integer handle called a "file descriptor" (fd), 
+    or -1 if the file could not be opened.
+  - File descriptors numbered 0 and 1 are reserved for the console: 
+    fd 0 (`STDIN_FILENO`) is standard input, fd 1 (`STDOUT_FILENO`) is standard output.
+  - The `open` system call will never return either of these file descriptors, 
+    which are valid as system call arguments only as explicitly described below.
+    - When a single file is opened more than once, whether by a single process or 
+      different processes, each `open` returns a new file descriptor.
+    - Different file descriptors for a single file are closed independently 
+      in separate calls to `close` and they do not share a file position.
+  - Each process has an independent set of file descriptors. 
+    File descriptors are not inherited by child processes. */
+int
+sys_open (const char *file)
+{
+  {}
+}
+
+/* Returns the size, in bytes, of the file open as fd. */
+int
+sys_filesize (int fd)
+{
+  {}
+}
+
+/* Reads size bytes from the file open as fd into buffer.
+  - Returns the number of bytes actually read (0 at end of file), or -1 
+    if the file could not be read (due to a condition other than end of file).
+  - Fd 0 reads from the keyboard using input_getc(). */
+int
+sys_read (int fd, void *buffer, unsigned size)
+{
+  {}
+}
+
+/* Writes size bytes from buffer to the open file fd.
+  - Returns the number of bytes actually written, 
+    which may be less than size if some bytes could not be written.
+  - Writing past end-of-file would normally extend the file, 
+    but file growth is not implemented by the basic file system. 
+    The expected behavior is to write as many bytes as possible up to end-of-file 
+    and return the actual number written, or 0 if no bytes could be written at all.
+  - Fd 1 writes to the console. Your code to write to the console should write all 
+    of buffer in one call to `putbuf()`, at least as long as size is not bigger 
+    than a few hundred bytes. (It is reasonable to break up larger buffers.) 
+    Otherwise, lines of text output by different processes may end up interleaved 
+    on the console, confusing both human readers and our grading scripts. */
+int
+sys_write (int fd, const void *buffer, unsigned size)
+{
+  check_vaddr (buffer);
+  // lock_acquire (&file_lock);
+  if (fd == 1)
+  {
+    /* putbuf() 함수를 이용하여 버퍼의 내용을 콘솔에 입력한다. 이 때에는 필요한 사이즈만큼 반복문을 돌아야 한다. */
+    putbuf (buffer, size);
+    return size;
+  }
+}
+
+/* Changes the next byte to be read or written in open file fd to position, 
+   expressed in bytes from the beginning of the file. (Thus, a position of 0 is the file's start.)
+  - A seek past the current end of a file is not an error. 
+    A later read obtains 0 bytes, indicating end of file. 
+    A later write extends the file, filling any unwritten gap with zeros. 
+    (However, in Pintos files have a fixed length until project 4 is complete, so writes past end of file will return an error.)
+  - These semantics are implemented in the file system and 
+    do not require any special effort in system call implementation. */
+void
+sys_seek (int fd, unsigned position)
+{
+  {}
+}
+
+/* Returns the position of the next byte to be read or written in open file fd, 
+   expressed in bytes from the beginning of the file. */
+unsigned
+sys_tell (int fd)
+{
+  {}
+}
+
+/* Closes file descriptor fd.
+- Exiting or terminating a process implicitly closes all its open file descriptors, 
+  as if by calling this function for each one. */
+void
+sys_close (int fd)
+{
+  {}
+}

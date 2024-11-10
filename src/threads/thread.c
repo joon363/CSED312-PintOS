@@ -579,13 +579,12 @@ is_thread (struct thread *t)
   return t != NULL && t->magic == THREAD_MAGIC;
 }
 
-/* iterate */
+/* iterate child threads until find one with same tid. */
 struct thread*
 find_current_child(tid_t tid){
   struct thread *current = thread_current();
   struct list_elem* iter = NULL;
   struct thread *elem = NULL;
-  struct thread *res = NULL;
   for (iter = list_begin(&(current->children_list)); iter != list_end(&(current->children_list)); iter = list_next(iter))
   {
     elem = list_entry (iter, struct thread, child_elem);
@@ -596,6 +595,7 @@ find_current_child(tid_t tid){
   }
   return NULL;
 }
+
 /* Does basic initialization of T as a blocked thread named
    NAME. */
 static void
