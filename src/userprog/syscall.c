@@ -1,8 +1,17 @@
 #include "userprog/syscall.h"
+#include "userprog/process.h"
 #include <stdio.h>
+#include <string.h>
 #include <syscall-nr.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include "threads/vaddr.h"
+#include "threads/synch.h"
+#include "filesys/filesys.h"
+#include "filesys/file.h"
+#include "filesys/off_t.h"
+#include "devices/block.h"
+#include "devices/shutdown.h"
 
 static void syscall_handler (struct intr_frame *);
 
@@ -16,7 +25,7 @@ syscall_init (void)
 void
 check_vaddr (const void *vaddr)
 {
-  if (!is_user_vaddr (vaddr) || vaddr <= 0) {
+  if (!is_user_vaddr (vaddr)) {
     sys_exit(-1);
   }
 }
@@ -30,11 +39,11 @@ syscall_handler (struct intr_frame *f UNUSED)
   void *esp = f->esp;
 
   /* getting syscall number and arguments from frame. */
-  uint32_t syscall_number =  *(uint32_t *)esp
+  uint32_t syscall_number =  *(uint32_t *)esp;
   uint32_t argv[3];
-  argv[0] = *(uint32_t *)(sp + 4);
-  argv[1] = *(uint32_t *)(sp + 8);
-  argv[2] = *(uint32_t *)(sp + 12);
+  argv[0] = *(uint32_t *)(esp + 4);
+  argv[1] = *(uint32_t *)(esp + 8);
+  argv[2] = *(uint32_t *)(esp + 12);
 
   /* call syscall functions according to syscall number. */
   switch (syscall_number) {
@@ -55,7 +64,7 @@ syscall_handler (struct intr_frame *f UNUSED)
     }
 
     case SYS_WAIT: {                  // syscall1: pid_t pid
-      pid_t pid = (pid_t)argv[0];
+      int pid = (int)argv[0];
       f->eax = sys_wait(pid);
       break;
     }

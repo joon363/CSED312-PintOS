@@ -49,19 +49,19 @@ process_execute (const char *file_name)
 void
 set_args_stack (char **argv, int argc, void **esp)
 {
+  int i=0;
+  int len=0;
   /* argv[i] value */
-  for (i = argc - 1, i >= 0; i--)
+  for (i = argc - 1; i >= 0; i--)
   {
-    len = strlen (str)+1;
+    len = strlen (argv[i])+1;
     *esp -= len;
     strlcpy (*esp, argv[i], len + 1);
     argv[i] = *esp;
   }
   
-  /* padding */
-  if(*esp % 4){
-    *esp -= 4 - (*esp % 4);
-  }
+  /* Alignment */
+  *esp = (void*)((uint32_t)(*esp) & 0xfffffffc);
   
   /* null. */
   *esp -= 4;
@@ -71,12 +71,12 @@ set_args_stack (char **argv, int argc, void **esp)
   for(i = argc - 1; i >= 0; i--)
   {
     *esp -= 4;
-    **(uint32_t **)esp = argv[i];
+    **(uint32_t **)esp = (uint32_t)argv[i];
   }
 
   /* argv itself address */
   *esp -= 4;
-  **(uint32_t **)esp = *esp + 4;
+  **(uint32_t **)esp = (uint32_t)*esp + 4;
 
   /* argc */
   *esp -= 4;
@@ -94,13 +94,13 @@ parse_args(char **argv, char* args){
   char *token, *save_ptr;
   int argc = 0;
 
-  token = strtok_r (args, " ", &save_ptr)
+  token = strtok_r (args, " ", &save_ptr);
   while(token!=NULL){
     argv[argc] = token;
     argc++;
     /* Limit argument count to 127. see ISO C Standard*/
     ASSERT(argc<127);
-    token = strtok_r (NULL, " ", &save_ptr)
+    token = strtok_r (NULL, " ", &save_ptr);
   }
   
   return argc;
@@ -117,7 +117,7 @@ start_process (void *file_name_)
 
   /* Parse Arguments */
   char **argv = palloc_get_page(0);
-  argc= parse_args(argv, file_name);
+  int argc = parse_args(argv, file_name);
 
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
