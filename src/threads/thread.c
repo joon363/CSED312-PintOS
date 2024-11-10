@@ -579,6 +579,23 @@ is_thread (struct thread *t)
   return t != NULL && t->magic == THREAD_MAGIC;
 }
 
+/* iterate */
+struct thread*
+find_current_child(tid_t tid){
+  struct thread *current = thread_current();
+  struct list_elem* iter = NULL;
+  struct thread *elem = NULL;
+  struct thread *res = NULL;
+  for (iter = list_begin(&(current->children_list)); iter != list_end(&(current->children_list)); iter = list_next(iter))
+  {
+    elem = list_entry (iter, struct thread, child_elem);
+    if (elem->tid == tid)
+    {
+      return elem;
+    }
+  }
+  return NULL;
+}
 /* Does basic initialization of T as a blocked thread named
    NAME. */
 static void
@@ -600,6 +617,16 @@ init_thread (struct thread *t, const char *name, int priority)
   t->waiting_lock = NULL;
   list_init(&t->donations);
 
+  /* Parent, Children Init */
+  for (int i=0; i<128; i++)
+    t->fd[i] = NULL;
+  t->parent = running_thread();
+  sema_init (&t->child_lock, 0);
+  sema_init (&t->exit_lock, 0);
+  sema_init (&t->execute_lock, 0);
+  list_init (&(t->children_list));
+  list_push_back (&(running_thread()->children_list), &(t->child_elem));
+  
   /* Initialize recent_cpu and nice */
   if (thread_mlfqs) {
     if (t == initial_thread) {
