@@ -45,6 +45,66 @@ process_execute (const char *file_name)
   return tid;
 }
 
+void
+set_args_stack (char **argv, int argc, void **esp)
+{
+  /* argv[i] value */
+  for (i = argc - 1, i >= 0; i--)
+  {
+    len = strlen (str)+1;
+    *esp -= len;
+    strlcpy (*esp, argv[i], len + 1);
+    argv[i] = *esp;
+  }
+  
+  /* padding */
+  if(*esp % 4){
+    *esp -= 4 - (*esp % 4);
+  }
+  
+  /* null. */
+  *esp -= 4;
+  **(uint32_t **)esp = 0;
+
+  /* argv[i] address */
+  for(i = argc - 1; i >= 0; i--)
+  {
+    *esp -= 4;
+    **(uint32_t **)esp = argv[i];
+  }
+
+  /* argv itself address */
+  *esp -= 4;
+  **(uint32_t **)esp = *esp + 4;
+
+  /* argc */
+  *esp -= 4;
+  **(uint32_t **)esp = argc;
+
+  /* fake return address. */
+  *esp -= 4;
+  **(uint32_t **)esp = 0;
+}
+
+int
+parse_args(char **argv, char* args){
+  /*parse by words
+  * use strtok_r to prevent any danger in multithreading environments
+  */
+  char *token, *save_ptr;
+  int argc = 0;
+  token = strtok_r (args, " ", &save_ptr)
+  while(token!=NULL){
+    argv[argc] = token;
+    argc++;
+    /* Limit argument count to 127. see ISO C Standard*/
+    ASSERT(argc<127);
+
+    token = strtok_r (NULL, " ", &save_ptr)
+  }
+  return argc;
+}
+
 /* A thread function that loads a user process and starts it
    running. */
 static void
@@ -54,12 +114,20 @@ start_process (void *file_name_)
   struct intr_frame if_;
   bool success;
 
+  /* Parse Arguments*/
+  char **argv = palloc_get_page(0);
+  argc= parse_args(argv, file_name);
+
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
-  success = load (file_name, &if_.eip, &if_.esp);
+  success = load (argv[0], &if_.eip, &if_.esp);
+
+  /* Set arguments stack*/
+  if(success) set_args_stack(argv, argc, &if_.esp);
+  palloc_free_page (argv);
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
