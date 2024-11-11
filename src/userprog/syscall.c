@@ -44,7 +44,7 @@ syscall_handler (struct intr_frame *f UNUSED)
   argv[0] = *(uint32_t *)(esp + 4);
   argv[1] = *(uint32_t *)(esp + 8);
   argv[2] = *(uint32_t *)(esp + 12);
-
+  
   check_vaddr(argv[0]);
   check_vaddr(argv[1]);
   check_vaddr(argv[2]);
@@ -168,24 +168,22 @@ int sys_wait(int pid)
   return process_wait (pid);
 }
 
-/*- Creates a new file called file initially initial_size bytes in size.
-    - Returns true if successful, false otherwise.
-    - Creating a new file does not open it: opening the new file is a 
-      separate operation which would require a `open` system call. */
+/* Creates a new file called file initially initial_size bytes in size.*/
 bool
 sys_create(const char *file, unsigned initial_size)
 {
-  {}
+  if (file == NULL)
+    sys_exit(-1);
+  return filesys_create (file, initial_size);
 }
 
-/* Deletes the file called file.
-  - Returns true if successful, false otherwise.
-  - A file may be removed regardless of whether it is open or closed, 
-    and removing an open file does not close it. */
+/* Deletes the file called file.*/
 bool
 sys_remove (const char *file)
 {
-  {}
+  if (file == NULL)
+    sys_exit(-1);
+  return filesys_remove (file);
 }
 
 /* Opens the file called file.
@@ -211,7 +209,12 @@ sys_open (const char *file)
 int
 sys_filesize (int fd)
 {
-  {}
+  struct file *f = thread_current()->fd[fd];
+  if (f == NULL){
+    sys_exit(-1);
+    NOT_REACHED();
+  }
+  return file_length (f);
 }
 
 /* Reads size bytes from the file open as fd into buffer.
@@ -221,7 +224,30 @@ sys_filesize (int fd)
 int
 sys_read (int fd, void *buffer, unsigned size)
 {
-  {}
+  check_vaddr (buffer);
+  check_vaddr (buffer+size-1);
+  if (fd == 0) // STDIN
+  {
+    int count;
+    char key;
+    for (count=0; count<size; count++)
+    {
+      key = input_getc();
+      ((char*)buffer)[count]=key;
+      if (key == '\0') break;
+      else buffer+=1;
+    }
+    return count;
+  }
+  else if (fd==1) //STDOUT
+  {
+    return -1;
+  }
+  else {
+    struct file *f = thread_current()->fd[fd];
+    if (f == NULL) return -1;
+    return file_read (f, buffer, size);  
+  }
 }
 
 /* Writes size bytes from buffer to the open file fd.
