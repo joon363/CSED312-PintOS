@@ -19,6 +19,7 @@ int sys_write(int fd, const void *buffer, unsigned size);
 void sys_seek(int fd, unsigned position);
 unsigned sys_tell(int fd);
 void sys_close(int fd);
-struct file *getfile(int fd);
+struct file *fd_to_file(int fd);
+int keyboard_read(void *buffer, unsigned size);
 
 #endif /* userprog/syscall.h */

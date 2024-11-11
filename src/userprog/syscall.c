@@ -12,6 +12,7 @@
 #include "filesys/off_t.h"
 #include "devices/block.h"
 #include "devices/shutdown.h"
+#include "devices/input.h"
 
 static void syscall_handler (struct intr_frame *);
 
@@ -174,6 +175,14 @@ int sys_wait(int pid)
   return process_wait (pid);
 }
 
+/* Return file pointer according to fd number. */
+struct file *fd_to_file(int fd){
+  if(fd<0 || fd>128) sys_exit(-1);
+  struct file * f= thread_current()->fd[fd];
+  if(f==NULL) sys_exit(-1);
+  return f;
+}
+
 /* Creates a new file called file initially initial_size bytes in size.*/
 bool
 sys_create(const char *file, unsigned initial_size)
@@ -221,23 +230,14 @@ sys_open (const char *file)
 int
 sys_filesize (int fd)
 {
-  struct file *f = thread_current()->fd[fd];
-  if (f == NULL) sys_exit(-1);
+  struct file *f = fd_to_file(fd);
   return file_length (f);
 }
 
-/* Reads size bytes from the file open as fd into buffer.
-  - Returns the number of bytes actually read (0 at end of file), or -1 
-    if the file could not be read (due to a condition other than end of file).
-  - Fd 0 reads from the keyboard using input_getc(). */
+/* Reads from the keyboard using input_getc(). */
 int
-sys_read (int fd, void *buffer, unsigned size)
-{
-  check_vaddr (buffer);
-  check_vaddr (buffer+size-1);
-  if (fd == 0) // STDIN
-  {
-    int count;
+keyboard_read(void *buffer, unsigned size){
+  unsigned count;
     char key;
     for (count=0; count<size; count++)
     {
@@ -248,14 +248,24 @@ sys_read (int fd, void *buffer, unsigned size)
     }
     return count;
   }
-  else if (fd==1) //STDOUT
+
+/* Reads size bytes from the file open as fd into buffer. */
+int
+sys_read (int fd, void *buffer, unsigned size)
+{
+  check_vaddr (buffer);
+  check_vaddr (buffer+size-1);
+  switch (fd)
   {
-    return -1;
-  }
-  else {
-    struct file *f = thread_current()->fd[fd];
-    if (f == NULL) return -1;
-    return file_read (f, buffer, size);  
+  case 0:   // STDIN
+    return keyboard_read(buffer, size);
+  case 1:   // STDOUT
+    return 0;
+  default:  // File
+    {
+      struct file *f = fd_to_file(fd);
+      return file_read (f, buffer, size);  
+    }
   }
 }
 
@@ -274,10 +284,13 @@ sys_read (int fd, void *buffer, unsigned size)
 int
 sys_write (int fd, const void *buffer, unsigned size)
 {
-  if (fd == 1)
-  {
+  if (fd == 1){
     putbuf (buffer, size);
     return size;
+  }
+  else{
+    struct file *f = fd_to_file(fd);
+    return file_write (f, buffer, size);
   }
 }
 
@@ -292,7 +305,8 @@ sys_write (int fd, const void *buffer, unsigned size)
 void
 sys_seek (int fd, unsigned position)
 {
-  {}
+  struct file *f = fd_to_file(fd);
+  return file_seek (f, position);
 }
 
 /* Returns the position of the next byte to be read or written in open file fd, 
@@ -300,7 +314,8 @@ sys_seek (int fd, unsigned position)
 unsigned
 sys_tell (int fd)
 {
-  {}
+  struct file *f = fd_to_file(fd);
+  return file_tell(f);
 }
 
 /* Closes file descriptor fd.
@@ -309,5 +324,7 @@ sys_tell (int fd)
 void
 sys_close (int fd)
 {
-  {}
+  struct file *f = fd_to_file(fd);
+  f = NULL;
+  file_close (f);
 }
