@@ -118,6 +118,7 @@ struct thread
     struct semaphore execute_lock;
 
     struct file *fd[128];
+    struct file *executing_file;
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
