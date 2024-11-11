@@ -63,6 +63,7 @@ syscall_handler (struct intr_frame *f UNUSED)
 
     case SYS_EXEC: {                  // syscall1: const char *file
       const char *file = (const char *)argv[0];
+      if(file==NULL) sys_exit(-1);
       f->eax = sys_exec(file);
       break;
     }
@@ -76,18 +77,21 @@ syscall_handler (struct intr_frame *f UNUSED)
     case SYS_CREATE: {                // syscall2: const char *file, unsigned initial_size
       const char *file = (const char *)argv[0];
       unsigned initial_size = (unsigned)argv[1];
+      if(file==NULL) sys_exit(-1);
       f->eax = sys_create(file, initial_size);
       break;
     }
 
     case SYS_REMOVE: {                // syscall1: const char *file
       const char *file = (const char *)argv[0];
+      if(file==NULL) sys_exit(-1);
       f->eax = sys_remove(file);
       break;
     }
 
     case SYS_OPEN: {                  // syscall1: const char *file
       const char *file = (const char *)argv[0];
+      if(file==NULL) sys_exit(-1);
       f->eax = sys_open(file);
       break;
     }
@@ -102,6 +106,7 @@ syscall_handler (struct intr_frame *f UNUSED)
       int fd = (int)argv[0];
       void *buffer = (void *)argv[1];
       unsigned size = (unsigned)argv[2];
+      if(buffer==NULL) sys_exit(-1);
       f->eax = sys_read(fd, buffer, size);
       break;
     }
@@ -110,6 +115,7 @@ syscall_handler (struct intr_frame *f UNUSED)
       int fd = (int)argv[0];
       const void *buffer = (const void *)argv[1];
       unsigned size = (unsigned)argv[2];
+      if(buffer==NULL) sys_exit(-1);
       f->eax = sys_write(fd, buffer, size);
       break;
     }
@@ -172,8 +178,6 @@ int sys_wait(int pid)
 bool
 sys_create(const char *file, unsigned initial_size)
 {
-  if (file == NULL)
-    sys_exit(-1);
   return filesys_create (file, initial_size);
 }
 
@@ -181,8 +185,6 @@ sys_create(const char *file, unsigned initial_size)
 bool
 sys_remove (const char *file)
 {
-  if (file == NULL)
-    sys_exit(-1);
   return filesys_remove (file);
 }
 
@@ -202,7 +204,17 @@ sys_remove (const char *file)
 int
 sys_open (const char *file)
 {
-  {}
+  struct file *return_file = filesys_open (file);
+  if (return_file == NULL) return -1;
+  for (int i=3; i<128; i++)
+  {
+    if (thread_current()->fd[i] == NULL)
+    {
+      thread_current()->fd[i] = return_file;
+      return i;
+    }
+  }
+  return -1;
 }
 
 /* Returns the size, in bytes, of the file open as fd. */
@@ -210,10 +222,7 @@ int
 sys_filesize (int fd)
 {
   struct file *f = thread_current()->fd[fd];
-  if (f == NULL){
-    sys_exit(-1);
-    NOT_REACHED();
-  }
+  if (f == NULL) sys_exit(-1);
   return file_length (f);
 }
 
@@ -265,11 +274,8 @@ sys_read (int fd, void *buffer, unsigned size)
 int
 sys_write (int fd, const void *buffer, unsigned size)
 {
-  check_vaddr (buffer);
-  // lock_acquire (&file_lock);
   if (fd == 1)
   {
-    /* putbuf() 함수를 이용하여 버퍼의 내용을 콘솔에 입력한다. 이 때에는 필요한 사이즈만큼 반복문을 돌아야 한다. */
     putbuf (buffer, size);
     return size;
   }
