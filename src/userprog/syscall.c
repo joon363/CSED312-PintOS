@@ -45,6 +45,10 @@ syscall_handler (struct intr_frame *f UNUSED)
   argv[1] = *(uint32_t *)(esp + 8);
   argv[2] = *(uint32_t *)(esp + 12);
 
+  check_vaddr(argv[0]);
+  check_vaddr(argv[1]);
+  check_vaddr(argv[2]);
+
   /* call syscall functions according to syscall number. */
   switch (syscall_number) {
     case SYS_HALT:                    // syscall0
