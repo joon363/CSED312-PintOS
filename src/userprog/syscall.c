@@ -169,7 +169,8 @@ int
 sys_exec (const char *cmd_line)
 {
   /* process_execute returns -1 if program fails for some reason. */
-  return process_execute (cmd_line);
+  int pid = process_execute (cmd_line);
+  return pid;
 }
 
 /* Waits for a child process pid and retrieves the child's exit status. 
@@ -220,7 +221,7 @@ sys_open (const char *file)
 {
   struct file *return_file = filesys_open (file);
   if (return_file == NULL) return -1;
-  for (int i=3; i<128; i++)
+  for (int i=2; i<128; i++)
   {
     if (thread_current()->fd[i] == NULL)
     {

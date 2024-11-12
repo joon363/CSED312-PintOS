@@ -116,6 +116,8 @@ struct thread
     struct semaphore child_lock;
     struct semaphore exit_lock;
     struct semaphore execute_lock;
+    struct semaphore load_lock;
+    bool isloaded;
 
     struct file *fd[128];
 

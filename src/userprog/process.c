@@ -50,11 +50,17 @@ process_execute (const char *file_name)
      knows whether the child process successfully loaded its executable. 
      Thus, wait for child's execute_lock. this lock will be released at 
      end of start_process. */
-  sema_down (&find_current_child(tid)->execute_lock);
+  int res = tid;
+  struct thread* child = find_current_child(tid);
+  sema_down (&child->execute_lock);
+  if(child->isloaded==false){
+    res = TID_ERROR;
+  }
+  sema_up (&child->load_lock);
   if (tid == TID_ERROR){
     palloc_free_page (fn_copy); 
   }
-  return tid;
+  return res;
 }
 
 /* Setting stack for arguments according to calling convention. */
@@ -137,6 +143,7 @@ start_process (void *file_name_)
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
   success = load (argv[0], &if_.eip, &if_.esp);
+  thread_current()->isloaded = success;
 
   /* Set arguments stack */
   if(success) set_args_stack(argv, argc, &if_.esp);
@@ -144,7 +151,9 @@ start_process (void *file_name_)
   palloc_free_page (file_name);
   
   /* Wake up parent waiting for loading. */
-  sema_up (&(thread_current ()->execute_lock));
+  struct thread * cur = thread_current ();
+  sema_up (&(cur->execute_lock));
+  sema_down (&(cur->load_lock));
   
   /* If load failed, quit. */
   if (!success) 
