@@ -161,28 +161,26 @@ sys_exit (int status)
   thread_exit();
 }
 
-/* call process_execute from userprog/process.c.  
-Must return pid -1, which otherwise should not be a valid pid, if the program cannot load or run for any reason. 
-Thus, the parent process cannot return from the exec until it knows whether the child process successfully 
-loaded its executable. */
+/* call process_execute from userprog/process.c. */
 int
 sys_exec (const char *cmd_line)
 {
   /* process_execute returns -1 if program fails for some reason. */
-  int pid = process_execute (cmd_line);
-  return pid;
+  return process_execute (cmd_line);
 }
 
 /* Waits for a child process pid and retrieves the child's exit status. 
 - If pid is still alive, waits until it terminates. Then, returns the status that pid passed to `exit`.
 - If pid did not call `exit()`, but was terminated by the kernel (e.g. killed due to an exception), `wait(pid)` must return -1.*/
-int sys_wait(int pid)
+int 
+sys_wait(int pid)
 {
   return process_wait (pid);
 }
 
 /* Return file pointer according to fd number. */
-struct file *fd_to_file(int fd){
+struct file *
+fd_to_file(int fd){
   if(fd<0 || fd>128) sys_exit(-1);
   struct file * f= thread_current()->fd[fd];
   if(f==NULL) sys_exit(-1);
@@ -278,15 +276,9 @@ sys_read (int fd, void *buffer, unsigned size)
 /* Writes size bytes from buffer to the open file fd.
   - Returns the number of bytes actually written, 
     which may be less than size if some bytes could not be written.
-  - Writing past end-of-file would normally extend the file, 
-    but file growth is not implemented by the basic file system. 
-    The expected behavior is to write as many bytes as possible up to end-of-file 
+  - The expected behavior is to write as many bytes as possible up to end-of-file 
     and return the actual number written, or 0 if no bytes could be written at all.
-  - Fd 1 writes to the console. Your code to write to the console should write all 
-    of buffer in one call to `putbuf()`, at least as long as size is not bigger 
-    than a few hundred bytes. (It is reasonable to break up larger buffers.) 
-    Otherwise, lines of text output by different processes may end up interleaved 
-    on the console, confusing both human readers and our grading scripts. */
+  - Fd 1 writes to the console.  */
 int
 sys_write (int fd, const void *buffer, unsigned size)
 {

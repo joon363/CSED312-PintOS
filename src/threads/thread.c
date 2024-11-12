@@ -624,7 +624,7 @@ init_thread (struct thread *t, const char *name, int priority)
   sema_init (&t->child_lock, 0);
   sema_init (&t->exit_lock, 0);
   sema_init (&t->execute_lock, 0);
-  sema_init (&t->load_lock, 0);
+  sema_init (&t->check_load_lock, 0);
   list_init (&(t->children_list));
   list_push_back (&(running_thread()->children_list), &(t->child_elem));
   t->isloaded= false;

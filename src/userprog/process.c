@@ -56,7 +56,7 @@ process_execute (const char *file_name)
   if(child->isloaded==false){
     res = TID_ERROR;
   }
-  sema_up (&child->load_lock);
+  sema_up (&child->check_load_lock);
   if (tid == TID_ERROR){
     palloc_free_page (fn_copy); 
   }
@@ -153,7 +153,7 @@ start_process (void *file_name_)
   /* Wake up parent waiting for loading. */
   struct thread * cur = thread_current ();
   sema_up (&(cur->execute_lock));
-  sema_down (&(cur->load_lock));
+  sema_down (&(cur->check_load_lock));
   
   /* If load failed, quit. */
   if (!success) 
