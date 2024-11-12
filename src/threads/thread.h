@@ -120,6 +120,7 @@ struct thread
     bool isloaded;
 
     struct file *fd[128];
+    struct file *executing_file;
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */

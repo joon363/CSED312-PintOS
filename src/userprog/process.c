@@ -232,6 +232,12 @@ process_exit (void)
   /* signal to waiting parent thread. sema_down at process_wait. */
   sema_up (&(cur->child_lock));
   sema_down (&(cur->exit_lock));
+
+  /* Allow writes to executables. */
+  if (cur->executing_file != NULL) {
+    file_allow_write(cur->executing_file);
+    file_close(cur->executing_file);
+  }
 }
 
 /* Sets up the CPU for running user code in the current
@@ -419,6 +425,10 @@ load (const char *file_name, void (**eip) (void), void **esp)
         }
     }
 
+  /* Deny writes to executables. */
+  file_deny_write(file);
+  thread_current()->executing_file = file;
+
   /* Set up stack. */
   if (!setup_stack (esp))
     goto done;
@@ -430,7 +440,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
  done:
   /* We arrive here whether the load is successful or not. */
-  file_close (file);
+  // file_close (file);
   return success;
 }
 
