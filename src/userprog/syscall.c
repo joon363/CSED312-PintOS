@@ -56,9 +56,9 @@ syscall_handler (struct intr_frame *f UNUSED)
   argv[1] = *(uint32_t *)(esp + 8);
   argv[2] = *(uint32_t *)(esp + 12);
   
-  check_vaddr(argv[0]);
-  check_vaddr(argv[1]);
-  check_vaddr(argv[2]);
+  check_vaddr(esp + 4);
+  check_vaddr(esp + 8);
+  check_vaddr(esp + 12);
 
   /* call syscall functions according to syscall number. */
   switch (syscall_number) {
@@ -325,9 +325,6 @@ sys_write (int fd, const void *buffer, unsigned size)
   else{
     struct file *f = fd_to_file(fd);
     lock_acquire (&file_lock);
-    // if (f->deny_write) {
-    //   file_deny_write(f);
-    // }
     int res =  file_write (f, buffer, size);
     lock_release (&file_lock);
     return res;
@@ -346,7 +343,10 @@ void
 sys_seek (int fd, unsigned position)
 {
   struct file *f = fd_to_file(fd);
-  return file_seek (f, position);
+  lock_acquire (&file_lock);
+  file_seek (f, position);
+  lock_release (&file_lock);
+  return;
 }
 
 /* Returns the position of the next byte to be read or written in open file fd, 
@@ -355,7 +355,10 @@ unsigned
 sys_tell (int fd)
 {
   struct file *f = fd_to_file(fd);
-  return file_tell(f);
+  lock_acquire (&file_lock);
+  unsigned res = file_tell(f);
+  lock_release (&file_lock);
+  return res;
 }
 
 /* Closes file descriptor fd.
@@ -365,6 +368,9 @@ void
 sys_close (int fd)
 {
   struct file *f = fd_to_file(fd);
+  lock_acquire (&file_lock);
   f = NULL;
   file_close (f);
+  lock_release (&file_lock);
+  return;
 }
