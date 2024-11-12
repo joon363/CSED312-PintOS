@@ -161,7 +161,10 @@ sys_exit (int status)
   thread_exit();
 }
 
-/* call process_execute from userprog/process.c.  */
+/* call process_execute from userprog/process.c.  
+Must return pid -1, which otherwise should not be a valid pid, if the program cannot load or run for any reason. 
+Thus, the parent process cannot return from the exec until it knows whether the child process successfully 
+loaded its executable. */
 int
 sys_exec (const char *cmd_line)
 {
@@ -169,7 +172,9 @@ sys_exec (const char *cmd_line)
   return process_execute (cmd_line);
 }
 
-/* Waits for a child process pid and retrieves the child's exit status. */
+/* Waits for a child process pid and retrieves the child's exit status. 
+- If pid is still alive, waits until it terminates. Then, returns the status that pid passed to `exit`.
+- If pid did not call `exit()`, but was terminated by the kernel (e.g. killed due to an exception), `wait(pid)` must return -1.*/
 int sys_wait(int pid)
 {
   return process_wait (pid);

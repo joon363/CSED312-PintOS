@@ -29,17 +29,21 @@ tid_t
 process_execute (const char *file_name) 
 {
   char *fn_copy;
+  char *fn_copy2;
   tid_t tid;
 
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
   fn_copy = palloc_get_page (0);
-  if (fn_copy == NULL)
+  fn_copy2 = palloc_get_page (0);
+  if (fn_copy == NULL){
     return TID_ERROR;
+  }
   strlcpy (fn_copy, file_name, PGSIZE);
+  strlcpy (fn_copy2, file_name, PGSIZE);
   
   char *token, *save_ptr;
-  token = strtok_r (file_name, " ", &save_ptr);
+  token = strtok_r (fn_copy2, " ", &save_ptr);
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (token, PRI_DEFAULT, start_process, fn_copy);
   /* The parent process cannot return from the exec until it 
