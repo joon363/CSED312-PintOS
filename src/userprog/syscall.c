@@ -13,12 +13,22 @@
 #include "devices/block.h"
 #include "devices/shutdown.h"
 #include "devices/input.h"
+#include "threads/synch.h"
+
+struct lock file_lock;
+struct file 
+{
+  struct inode *inode;        /* File's inode. */
+  off_t pos;                  /* Current position. */
+  bool deny_write;            /* Has file_deny_write() been called? */
+};
 
 static void syscall_handler (struct intr_frame *);
 
 void
 syscall_init (void) 
 {
+  lock_init (&file_lock);
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
 
@@ -166,7 +176,10 @@ int
 sys_exec (const char *cmd_line)
 {
   /* process_execute returns -1 if program fails for some reason. */
-  return process_execute (cmd_line);
+  lock_acquire (&file_lock);
+  int pid = process_execute (cmd_line);
+  lock_release (&file_lock);
+  return pid;
 }
 
 /* Waits for a child process pid and retrieves the child's exit status. 
@@ -191,14 +204,20 @@ fd_to_file(int fd){
 bool
 sys_create(const char *file, unsigned initial_size)
 {
-  return filesys_create (file, initial_size);
+  lock_acquire (&file_lock);
+  bool res = filesys_create (file, initial_size);
+  lock_release (&file_lock);
+  return res;
 }
 
 /* Deletes the file called file.*/
 bool
 sys_remove (const char *file)
 {
-  return filesys_remove (file);
+  lock_acquire (&file_lock);
+  bool res= filesys_remove (file);
+  lock_release (&file_lock);
+  return res;
 }
 
 /* Opens the file called file.
@@ -217,12 +236,21 @@ sys_remove (const char *file)
 int
 sys_open (const char *file)
 {
+  lock_acquire (&file_lock);
   struct file *return_file = filesys_open (file);
-  if (return_file == NULL) return -1;
+  lock_release(&file_lock);
+  if (return_file == NULL) {
+    return -1;
+  }
   for (int i=2; i<128; i++)
   {
     if (thread_current()->fd[i] == NULL)
     {
+      if(thread_current()->executing_file !=NULL && strcmp(thread_current()->name, file)==0){
+        lock_acquire (&file_lock);
+        file_deny_write(return_file);
+        lock_release(&file_lock);   
+      }
       thread_current()->fd[i] = return_file;
       return i;
     }
@@ -235,7 +263,10 @@ int
 sys_filesize (int fd)
 {
   struct file *f = fd_to_file(fd);
-  return file_length (f);
+  lock_acquire (&file_lock);
+  int length = file_length (f);
+  lock_release (&file_lock);
+  return length;
 }
 
 /* Reads from the keyboard using input_getc(). */
@@ -268,7 +299,10 @@ sys_read (int fd, void *buffer, unsigned size)
   default:  // File
     {
       struct file *f = fd_to_file(fd);
-      return file_read (f, buffer, size);  
+      lock_acquire (&file_lock);
+      int bytes_read = file_read (f, buffer, size);
+      lock_release (&file_lock);
+      return bytes_read;
     }
   }
 }
@@ -283,12 +317,20 @@ int
 sys_write (int fd, const void *buffer, unsigned size)
 {
   if (fd == 1){
+    lock_acquire (&file_lock);
     putbuf (buffer, size);
+    lock_release (&file_lock);
     return size;
   }
   else{
     struct file *f = fd_to_file(fd);
-    return file_write (f, buffer, size);
+    lock_acquire (&file_lock);
+    // if (f->deny_write) {
+    //   file_deny_write(f);
+    // }
+    int res =  file_write (f, buffer, size);
+    lock_release (&file_lock);
+    return res;
   }
 }
 

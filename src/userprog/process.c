@@ -212,6 +212,15 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
+  
+
+  /* Allow writes to executables. */
+  if (cur->executing_file != NULL) {
+    file_close(cur->executing_file);
+  }
+  for(int i=2;i<128;i++){
+    file_close(cur->fd[i]);
+  }
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
@@ -232,12 +241,6 @@ process_exit (void)
   /* signal to waiting parent thread. sema_down at process_wait. */
   sema_up (&(cur->child_lock));
   sema_down (&(cur->exit_lock));
-
-  /* Allow writes to executables. */
-  if (cur->executing_file != NULL) {
-    file_allow_write(cur->executing_file);
-    file_close(cur->executing_file);
-  }
 }
 
 /* Sets up the CPU for running user code in the current
@@ -440,7 +443,6 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
  done:
   /* We arrive here whether the load is successful or not. */
-  // file_close (file);
   return success;
 }
 
