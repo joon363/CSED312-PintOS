@@ -104,6 +104,7 @@ struct thread
     struct lock* waiting_lock;          /* Lock information for priority donation*/
 
 #ifdef USERPROG
+#endif
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
     int exit_code;
@@ -120,7 +121,6 @@ struct thread
 
     struct file *fd[128];
     struct file *executing_file;
-#endif
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
