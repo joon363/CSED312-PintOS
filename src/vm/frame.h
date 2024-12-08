@@ -24,7 +24,7 @@ void *falloc_get_page(enum palloc_flags flags, void *upage);
 void  falloc_free_page (void *);
 void *try_page_allocation(enum palloc_flags flags);
 struct fte *create_frame_entry(void *kpage, void *upage);
-void evict_page();
+void evict_page(void);
 struct fte *get_fte (void* );
 
 

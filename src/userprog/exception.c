@@ -6,6 +6,9 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "threads/vaddr.h"
+#include "kernel/hash.h"
+#include "vm/spt.h"
 
 /* Number of page faults processed. */
 static long long page_fault_cnt;
@@ -128,6 +131,8 @@ page_fault (struct intr_frame *f)
   bool write;        /* True: access was write, false: access was read. */
   bool user;         /* True: access by user, false: access by kernel. */
   void *fault_addr;  /* Fault address. */
+  void *upage;
+  struct hash *spt;
 
   /* Obtain faulting address, the virtual address that was
      accessed to cause the fault.  It may point to code or to
@@ -149,8 +154,18 @@ page_fault (struct intr_frame *f)
   not_present = (f->error_code & PF_P) == 0;
   write = (f->error_code & PF_W) != 0;
   user = (f->error_code & PF_U) != 0;
-  if(not_present || (user && is_kernel_vaddr(fault_addr)) || (!user && is_user_vaddr(fault_addr))) {
-   sys_exit(-1);
+  if(!not_present || (user && is_kernel_vaddr(fault_addr)) || (!user && is_user_vaddr(fault_addr))) {
+    sys_exit(-1);
+  }
+
+  /* lazy loading */
+  spt = &thread_current()->spt;
+  upage = pg_round_down(fault_addr);
+  if (load_page (spt, upage)) {
+     return;
+  }
+  else{
+    sys_exit(-1);
   }
 
   /* To implement virtual memory, delete the rest of the function

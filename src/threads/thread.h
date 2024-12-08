@@ -5,6 +5,7 @@
 #include <list.h>
 #include <stdint.h>
 #include "threads/synch.h"
+#include "kernel/hash.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -121,6 +122,7 @@ struct thread
     struct file *fd[128];
     struct file *executing_file;
 #endif
+    struct hash spt;
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
