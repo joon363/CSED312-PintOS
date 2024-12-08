@@ -9,6 +9,7 @@
 #include "threads/vaddr.h"
 #include "kernel/hash.h"
 #include "vm/spt.h"
+#define MAX_STACK_SIZE 0x800000 // 8MB
 
 /* Number of page faults processed. */
 static long long page_fault_cnt;
@@ -133,6 +134,7 @@ page_fault (struct intr_frame *f)
   void *fault_addr;  /* Fault address. */
   void *upage;
   struct hash *spt;
+  void *esp;
 
   /* Obtain faulting address, the virtual address that was
      accessed to cause the fault.  It may point to code or to
@@ -154,13 +156,44 @@ page_fault (struct intr_frame *f)
   not_present = (f->error_code & PF_P) == 0;
   write = (f->error_code & PF_W) != 0;
   user = (f->error_code & PF_U) != 0;
-  if(!not_present || (user && is_kernel_vaddr(fault_addr)) || (!user && is_user_vaddr(fault_addr))) {
+  if(!not_present) {
+    //printf("page fault, NOT not_present");
+    sys_exit(-1);
+  }
+  if((user && is_kernel_vaddr(fault_addr)) || (!user && is_user_vaddr(fault_addr))) {
+    //printf("page fault, user accessed kernel");
+    sys_exit(-1);
+  }
+  if((user && is_kernel_vaddr(fault_addr)) || (!user && is_user_vaddr(fault_addr))) {
+    //printf("page fault, kernel accessed user");
     sys_exit(-1);
   }
 
-  /* lazy loading */
+  /* Stack growth*/
   spt = &thread_current()->spt;
   upage = pg_round_down(fault_addr);
+
+  if(user) esp = f->esp;
+  else esp = thread_current()->esp;
+  // stack growth condition
+  // 1. max size, user address space condition
+  bool is_max_not_reached = PHYS_BASE - MAX_STACK_SIZE <= fault_addr;
+  bool is_inside_user_memory = fault_addr < PHYS_BASE; 
+  // 2. esp <= fault_addr: stack should be bigger
+  bool is_stack_growth = esp <= fault_addr; 
+  // 3. push, pusha instruction
+  bool is_push_pusha = fault_addr == f->esp-4 ||fault_addr == f->esp-32; 
+  // 4. conclusion
+  bool addr_cond = is_max_not_reached && is_inside_user_memory;
+  bool stack_cond = is_stack_growth || is_push_pusha;
+  if(addr_cond&&stack_cond){
+    //if page exists, do not grow.
+    //else, initialize new zero page
+    if(!get_spte(spt,upage)){
+      init_zero_spte(spt, upage);
+    }
+  }
+  /* lazy loading */
   if (load_page (spt, upage)) {
      return;
   }

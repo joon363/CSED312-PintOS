@@ -92,6 +92,24 @@ init_file_spte(struct hash *spt, void *_upage, struct file *_file, off_t _ofs, u
   return e;
 }
 
+/* Initialize S-page table entry for zero
+ *  usage: page_fault at userprog/exception.c
+ */
+void
+init_zero_spte (struct hash *spt, void *upage)
+{
+  struct spte *e;
+  e = (struct spte *) malloc (sizeof *e);
+  
+  e->status = ZERO_PAGE;
+  e->kpage = NULL;
+  e->upage = upage;
+  
+  e->file = NULL;
+  e->writable = true;
+  hash_insert (spt, &e->hash_elem);
+}
+
 /* Lazy loading implementation
  *  usage: page_fault at userprog/exception.c
  *

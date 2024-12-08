@@ -32,6 +32,7 @@ void init_spt (struct hash *);
 void destroy_spt (struct hash *);
 void init_frame_spte (struct hash *, void *, void *);
 struct spte *init_file_spte (struct hash *, void *, struct file *, off_t, uint32_t, uint32_t, bool);
+void init_zero_spte (struct hash *spt, void *upage);
 bool load_page (struct hash *, void *);
 struct spte *get_spte (struct hash *, void *);
 void page_delete (struct hash *spt, struct spte *entry);
