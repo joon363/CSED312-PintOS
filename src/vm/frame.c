@@ -98,7 +98,7 @@ get_fte (void* kpage)
   return NULL;
 }
 
-//////////////TODO//////////////
+/* Evict Page */
 void evict_page(){
     printf("eviction!");
     return;
