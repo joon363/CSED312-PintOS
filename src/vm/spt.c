@@ -125,18 +125,20 @@ bool load_page(struct hash *spt, void *upage)
   pe.upage = upage;
   elem = hash_find(spt, &pe.hash_elem);
   if(elem==NULL) {
-    //printf("load_page hash find null")
+    //printf("load_page hash find null");
     sys_exit(-1);
   }
   else e = hash_entry(elem, struct spte, hash_elem);
   if (e == NULL) {
-    //printf("load_page hash entry null")
+    //printf("load_page hash entry null");
     sys_exit(-1);
   }
 
   kpage = falloc_get_page(PAL_USER, upage);
-  if (kpage == NULL)
+  if (kpage == NULL) {
+    //printf("load_page kpage null");
     sys_exit(-1);
+  }
 
   bool was_holding_lock = lock_held_by_current_thread(&file_lock);
 
@@ -156,6 +158,7 @@ bool load_page(struct hash *spt, void *upage)
     {
       falloc_free_page(kpage);
       lock_release(&file_lock);
+      //printf("load_page file error");
       sys_exit(-1);
     }
     memset(kpage + e->read_bytes, 0, e->zero_bytes);
@@ -165,7 +168,7 @@ bool load_page(struct hash *spt, void *upage)
 
   case FRAME_PAGE:
     // is already loaded.
-    sys_exit(-1);
+    return true;
   }
 
   pagedir = thread_current()->pagedir;
@@ -173,6 +176,7 @@ bool load_page(struct hash *spt, void *upage)
   if (!pagedir_set_page(pagedir, upage, kpage, e->writable))
   {
     falloc_free_page(kpage);
+    //printf("load_page pagedir set fail");
     sys_exit(-1);
   }
 

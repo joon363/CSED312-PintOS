@@ -100,5 +100,6 @@ get_fte (void* kpage)
 
 //////////////TODO//////////////
 void evict_page(){
+    printf("eviction!");
     return;
 }

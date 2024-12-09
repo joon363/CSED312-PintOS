@@ -40,7 +40,7 @@ void
 check_vaddr (const void *vaddr)
 {
   if (!is_user_vaddr (vaddr)) {
-    //printf("not user vaddr")
+    //printf("not user vaddr");
     sys_exit(-1);
   }
 }
@@ -79,7 +79,7 @@ syscall_handler (struct intr_frame *f UNUSED)
     case SYS_EXEC: {                  // syscall1: const char *file
       const char *file = (const char *)argv[0];
       if(file==NULL) {
-        //printf("SYS_EXEC file null")
+        //printf("SYS_EXEC file null");
         sys_exit(-1);
       }
       f->eax = sys_exec(file);
@@ -96,7 +96,7 @@ syscall_handler (struct intr_frame *f UNUSED)
       const char *file = (const char *)argv[0];
       unsigned initial_size = (unsigned)argv[1];
       if(file==NULL) {
-        //printf("SYS_CREATE file null")
+        //printf("SYS_CREATE file null");
         sys_exit(-1);
       }
       f->eax = sys_create(file, initial_size);
@@ -106,7 +106,7 @@ syscall_handler (struct intr_frame *f UNUSED)
     case SYS_REMOVE: {                // syscall1: const char *file
       const char *file = (const char *)argv[0];
       if(file==NULL) {
-        //printf("SYS_REMOVE file null")
+        //printf("SYS_REMOVE file null");
         sys_exit(-1);
       }
       f->eax = sys_remove(file);
@@ -116,7 +116,7 @@ syscall_handler (struct intr_frame *f UNUSED)
     case SYS_OPEN: {                  // syscall1: const char *file
       const char *file = (const char *)argv[0];
       if(file==NULL) {
-        //printf("SYS_OPEN file null")
+        //printf("SYS_OPEN file null");
         sys_exit(-1);
       }
       f->eax = sys_open(file);
@@ -134,7 +134,7 @@ syscall_handler (struct intr_frame *f UNUSED)
       void *buffer = (void *)argv[1];
       unsigned size = (unsigned)argv[2];
       if(buffer==NULL) {
-        //printf("SYS_READ buffer null")
+        //printf("SYS_READ buffer null");
         sys_exit(-1);
       }
       f->eax = sys_read(fd, buffer, size);
@@ -146,7 +146,7 @@ syscall_handler (struct intr_frame *f UNUSED)
       const void *buffer = (const void *)argv[1];
       unsigned size = (unsigned)argv[2];
       if(buffer==NULL) {
-        //printf("sys_write buffer null")
+        //printf("sys_write buffer null");
         sys_exit(-1);
       }
       f->eax = sys_write(fd, buffer, size);
@@ -230,12 +230,12 @@ sys_wait(int pid)
 struct file *
 fd_to_file(int fd){
   if(fd<0 || fd>128) {
-    //printf("fd_to_file fd error null")
+    //printf("fd_to_file fd error null");
     sys_exit(-1);
   }
   struct file * f= thread_current()->fd[fd];
   if(f==NULL) {
-    //printf("fd_to_file file null")
+    //printf("fd_to_file file null");
     sys_exit(-1);
   }
   return f;
