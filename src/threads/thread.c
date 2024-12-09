@@ -210,6 +210,7 @@ thread_create (const char *name, int priority,
   
 #ifdef VM
   init_spt(&t->spt);
+  list_init(&t->mmap_list);
 #endif
 
   /* Add to run queue. */

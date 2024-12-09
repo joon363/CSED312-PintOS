@@ -1,5 +1,6 @@
 #include "userprog/syscall.h"
 #include "userprog/process.h"
+#include "userprog/pagedir.h"
 #include <stdio.h>
 #include <string.h>
 #include <syscall-nr.h>
@@ -7,6 +8,7 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "threads/synch.h"
+#include "threads/malloc.h"
 #include "filesys/filesys.h"
 #include "filesys/file.h"
 #include "filesys/off_t.h"
@@ -14,6 +16,7 @@
 #include "devices/shutdown.h"
 #include "devices/input.h"
 #include "threads/synch.h"
+#include "vm/spt.h"
 
 struct lock file_lock;
 struct file 
@@ -147,6 +150,19 @@ syscall_handler (struct intr_frame *f UNUSED)
     case SYS_CLOSE: {                 // syscall1: int fd
       int fd = (int)argv[0];
       sys_close(fd);
+      break;
+    }
+
+    case SYS_MMAP: {                 // syscall2: int fd, void * addr
+      int fd = (int)argv[0];
+      void * addr = (void *)argv[1];
+      f->eax = sys_mmap(fd,addr);
+      break;
+    }
+
+    case SYS_MUNMAP: {                 // syscall1: mapid_t mapping
+      mapid_t mapping = (mapid_t)argv[0];
+      sys_munmap(mapping);
       break;
     }
   }
@@ -373,4 +389,111 @@ sys_close (int fd)
   file_close (f);
   lock_release (&file_lock);
   return;
+}
+
+/* Maps the file open as fd into the process's virtual address space. 
+ The entire file is mapped into consecutive virtual pages 
+ starting at addr. */
+mapid_t
+sys_mmap (int fd, void *addr)
+{
+  //printf("A1 ");
+  struct file *f = fd_to_file(fd);
+  //printf("A2 ");
+  lock_acquire (&file_lock);
+  //printf("A3 ");
+  struct file *opened_file = file_reopen (f);
+  //printf("A4 ");
+  lock_release (&file_lock);
+  if(opened_file==NULL) return -1;
+  //printf("A5 ");
+
+  struct mmap_file *mmf;
+  mmf = (struct mmap_file *) malloc(sizeof *mmf);
+  mmf->id = new_mmapid(thread_current());
+  //printf("A6 ");
+  mmf->file = opened_file;
+  mmf->upage = addr;
+
+  off_t ofs;
+  int size = file_length(opened_file);
+  struct hash *spt = &thread_current()->spt;
+
+  /* check if all pages do not exist.*/
+  for (ofs = 0; ofs < size; ofs += PGSIZE){
+    if (get_spte(spt, addr + ofs)) return -1;
+  }
+  //printf("A7 ");
+
+  /* map each page */
+  for (ofs = 0; ofs < size; ofs += PGSIZE) {
+      uint32_t read_bytes = ofs + PGSIZE < size ? PGSIZE : size - ofs;
+      init_file_spte(spt, addr, opened_file, ofs, read_bytes, PGSIZE - read_bytes, true);
+      addr += PGSIZE;
+  }
+  //printf("A8 ");
+
+  /* add to list */
+  list_push_back(&thread_current()->mmap_list, &mmf->mmap_file_elem);
+  return mmf->id;
+}
+
+/* allocate mapid */
+mapid_t 
+new_mmapid(struct thread* t){
+  mapid_t mapid=1;
+  if (! list_empty(&t->mmap_list)) {
+    mapid = list_entry(list_back(&t->mmap_list), struct mmap_file, mmap_file_elem)->id + 1;
+  }
+  return mapid;
+}
+
+/* Unmaps the mapping designated by mapping, which must be a 
+mapping ID returned by a previous call to mmap by the same process 
+that has not yet been unmapped. */
+void
+sys_munmap (mapid_t mapping)
+{
+  struct thread *t = thread_current();
+  struct mmap_file *mmf = get_mmf(t, mapping);
+  if(mmf==NULL) return -1;
+  lock_acquire (&file_lock);
+
+  off_t ofs;
+  void *upage;
+  for (ofs = 0; ofs < file_length(mmf->file); ofs += PGSIZE) {
+    upage = mmf->upage + ofs;
+    struct spte *entry = get_spte(&t->spt, upage);
+
+    // dirty page check
+    if (pagedir_is_dirty(t->pagedir, upage)) {
+        void *kpage = pagedir_get_page(t->pagedir, upage);
+        file_write_at(entry->file, kpage, entry->read_bytes, entry->file_offset);
+    }
+
+    // remove page
+    page_delete(&t->spt, entry);
+  }
+
+  // remove from list
+  list_remove(&mmf->mmap_file_elem);
+  lock_release (&file_lock);
+  return;
+}
+
+/* find mmap file based on mapping id. */
+struct mmap_file *
+get_mmf(struct thread *t, mapid_t mapping) {
+  struct list_elem *e;
+  struct mmap_file *res_mmf;
+  if (!list_empty(&t->mmap_list)) {
+    for(e = list_begin(&t->mmap_list); e != list_end(&t->mmap_list); e = list_next(e))
+    {
+      res_mmf = list_entry(e, struct mmap_file, mmap_file_elem);
+      if(res_mmf->id == mapping) {
+        return res_mmf;
+      }
+    }
+  }
+  return NULL;
 }

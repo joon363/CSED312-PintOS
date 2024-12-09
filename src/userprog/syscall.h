@@ -2,6 +2,7 @@
 #define USERPROG_SYSCALL_H
 
 #include <stdio.h>
+#include "threads/thread.h"
 
 void syscall_init (void);
 void check_vaddr (const void *vaddr);
@@ -22,4 +23,9 @@ void sys_close(int fd);
 struct file *fd_to_file(int fd);
 int keyboard_read(void *buffer, unsigned size);
 
+typedef int mapid_t;
+mapid_t sys_mmap(int fd, void *addr);
+mapid_t new_mmapid(struct thread * t);
+void sys_munmap(mapid_t mapping);
+struct mmap_file *get_mmf(struct thread *t, mapid_t mapping);
 #endif /* userprog/syscall.h */

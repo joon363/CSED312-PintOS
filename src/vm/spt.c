@@ -157,7 +157,8 @@ bool load_page(struct hash *spt, void *upage)
     if (!was_holding_lock) lock_release(&file_lock);
     break;
 
-  default:
+  case FRAME_PAGE:
+    // is already loaded.
     sys_exit(-1);
   }
 

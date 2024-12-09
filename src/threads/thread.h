@@ -124,6 +124,7 @@ struct thread
 #endif
     struct hash spt;
     void * esp;
+    struct list mmap_list;
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
@@ -185,4 +186,13 @@ int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
 struct thread*find_current_child(tid_t tid);
+
+struct mmap_file 
+{
+   int id;
+   struct file* file;
+   struct list_elem mmap_file_elem;
+   void *upage;
+};
+
 #endif /* threads/thread.h */
