@@ -11,7 +11,7 @@
 /* Frame Table Entry*/
 struct fte
 {
-    void *kernal_page;
+    void *kernel_page;
     struct list_elem elem;
 
     void *user_page;

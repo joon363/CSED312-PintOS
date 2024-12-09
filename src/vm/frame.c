@@ -64,7 +64,7 @@ create_frame_entry(void *kpage, void *upage) {
     if (entry == NULL) {
         return NULL;  // Allocation failed
     }
-    entry->kernal_page = kpage;
+    entry->kernel_page = kpage;
     entry->user_page = upage;
     entry->t = thread_current();
     return entry;
@@ -93,7 +93,7 @@ get_fte (void* kpage)
 {
   struct list_elem *e;
   for (e = list_begin (&frame_table); e != list_end (&frame_table); e = list_next (e))
-    if (list_entry (e, struct fte, elem)->kernal_page == kpage)
+    if (list_entry (e, struct fte, elem)->kernel_page == kpage)
       return list_entry (e, struct fte, elem);
   return NULL;
 }
