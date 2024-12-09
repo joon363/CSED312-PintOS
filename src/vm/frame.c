@@ -118,7 +118,7 @@ evict_page()
     if (clock_ptr == NULL || list_next(&clock_ptr->elem) == list_end(&frame_table)) {
       e = list_entry(list_begin(&frame_table), struct fte, elem);
     } else {
-      e = list_next(e);
+      e = list_next(&e->elem);
     }
 
     if (pagedir_is_accessed(e->t->pagedir, e->user_page)) {

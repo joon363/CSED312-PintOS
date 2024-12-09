@@ -40,7 +40,7 @@
 #ifdef VM
 #include "vm/frame.h"
 #include "vm/frame.c"
-#endif VM
+#endif
 
 /* Page directory with kernel mappings only. */
 uint32_t *init_page_dir;
