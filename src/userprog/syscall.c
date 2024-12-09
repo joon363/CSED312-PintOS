@@ -397,21 +397,22 @@ sys_close (int fd)
 mapid_t
 sys_mmap (int fd, void *addr)
 {
-  //printf("A1 ");
+  // mmap-misalign, mmap-null test case
+  if (addr == NULL ||(int) addr % PGSIZE != 0) {
+	  return -1;
+  }
+
   struct file *f = fd_to_file(fd);
-  //printf("A2 ");
   lock_acquire (&file_lock);
-  //printf("A3 ");
   struct file *opened_file = file_reopen (f);
-  //printf("A4 ");
-  lock_release (&file_lock);
-  if(opened_file==NULL) return -1;
-  //printf("A5 ");
+  if(opened_file==NULL) {
+	  lock_release (&file_lock);
+	  return -1;
+  }
 
   struct mmap_file *mmf;
   mmf = (struct mmap_file *) malloc(sizeof *mmf);
   mmf->id = new_mmapid(thread_current());
-  //printf("A6 ");
   mmf->file = opened_file;
   mmf->upage = addr;
 
@@ -421,9 +422,11 @@ sys_mmap (int fd, void *addr)
 
   /* check if all pages do not exist.*/
   for (ofs = 0; ofs < size; ofs += PGSIZE){
-    if (get_spte(spt, addr + ofs)) return -1;
+    if (get_spte(spt, addr + ofs)) {
+	    lock_release (&file_lock);
+      return -1;
+    }
   }
-  //printf("A7 ");
 
   /* map each page */
   for (ofs = 0; ofs < size; ofs += PGSIZE) {
@@ -431,10 +434,10 @@ sys_mmap (int fd, void *addr)
       init_file_spte(spt, addr, opened_file, ofs, read_bytes, PGSIZE - read_bytes, true);
       addr += PGSIZE;
   }
-  //printf("A8 ");
 
   /* add to list */
   list_push_back(&thread_current()->mmap_list, &mmf->mmap_file_elem);
+  lock_release (&file_lock);
   return mmf->id;
 }
 
