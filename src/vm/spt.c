@@ -3,6 +3,9 @@
 #include "threads/vaddr.h"
 #include "vm/frame.h"
 #include "vm/spt.h"
+// #include "swap.h"
+// #include "vm/swap.h"
+#include "swap.c"
 
 extern struct lock file_lock;
 static hash_hash_func spt_hash_func;
@@ -148,7 +151,7 @@ bool load_page(struct hash *spt, void *upage)
     memset(kpage, 0, PGSIZE);
     break;
   case SWAP_PAGE:
-    // swap_in(e, kpage);
+    swap_in(e->swap_id, kpage);
     break;
   case FILE_PAGE:
     if (!was_holding_lock) lock_acquire(&file_lock);

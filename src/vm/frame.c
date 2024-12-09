@@ -2,6 +2,9 @@
 #include "threads/synch.h"
 #include "threads/palloc.h"
 #include "frame.h"
+#include "spt.h"
+#include "swap.h"
+// #include "vm/swap.h"
 
 /* Syncronization*/
 static struct lock frame_lock;
@@ -9,12 +12,16 @@ static struct lock frame_lock;
 /* Frame Table*/
 static struct list frame_table;
 
+/* Clock Algorithm Pointer */
+static struct fte *clock_ptr;
+
 /* Frame Initialization*/
 void
 frame_init ()
 {
     list_init (&frame_table);
     lock_init (&frame_lock);
+    clock_ptr = NULL;
 }
 
 /* Allocate page. in setup_stack in process.c, palloc is replaced by falloc. */
@@ -99,7 +106,33 @@ get_fte (void* kpage)
 }
 
 /* Evict Page */
-void evict_page(){
-    printf("eviction!");
-    return;
+void
+evict_page()
+{
+  struct fte *e = clock_ptr;
+  
+  while(true) {
+    if (e!=NULL) {
+      pagedir_set_accessed(e->t->pagedir, e->user_page, false);
+    }
+    if (clock_ptr == NULL || list_next(&clock_ptr->elem) == list_end(&frame_table)) {
+      e = list_entry(list_begin(&frame_table), struct fte, elem);
+    } else {
+      e = list_next(e);
+    }
+
+    if (pagedir_is_accessed(e->t->pagedir, e->user_page)) {
+      break;
+    }
+  }
+
+  struct spte *s = get_spte(&thread_current()->spt, e->user_page);
+  s->status = SWAP_PAGE;
+  s->swap_id = swap_out(e->kernel_page);
+
+  lock_release(&frame_lock);
+  falloc_free_page(e->kernel_page);
+  lock_acquire(&frame_lock);
+
+  return;
 }
