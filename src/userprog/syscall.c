@@ -52,6 +52,7 @@ syscall_handler (struct intr_frame *f UNUSED)
   /* exit when address is invalid. */
   check_vaddr(f->esp);
   void *esp = f->esp;
+  thread_current()->esp = f->esp;
 
   /* getting syscall number and arguments from frame. */
   uint32_t syscall_number =  *(uint32_t *)esp;
