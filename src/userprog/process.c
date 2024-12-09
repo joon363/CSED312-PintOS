@@ -215,7 +215,17 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
-  
+
+#ifdef VM
+  /* close all mmap files */
+  while (!list_empty(&cur->mmap_list)) {
+    struct mmap_file *mmf = list_entry (list_pop_front (&cur->mmap_list), struct mmap_file, mmap_file_elem);
+    sys_munmap(mmf->id);
+  }
+
+  /* destroy SPT */
+  destroy_spt(&cur->spt);
+#endif
 
   /* Allow writes to executables. */
   if (cur->executing_file != NULL) {
