@@ -198,7 +198,8 @@ page_fault (struct intr_frame *f)
      return;
   }
   else{
-    sys_exit(-1);
+   //printf("load failed");
+   sys_exit(-1);
   }
 
   /* To implement virtual memory, delete the rest of the function
