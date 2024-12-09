@@ -175,7 +175,7 @@ bool load_page(struct hash *spt, void *upage)
   return true;
 }
 
-/* ser */
+/* search given upage within spt. */
 struct spte *
 get_spte(struct hash *spt, void *upage)
 {
