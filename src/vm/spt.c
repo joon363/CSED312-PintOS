@@ -131,10 +131,12 @@ bool load_page(struct hash *spt, void *upage)
     //printf("load_page hash find null");
     sys_exit(-1);
   }
-  else e = hash_entry(elem, struct spte, hash_elem);
-  if (e == NULL) {
-    //printf("load_page hash entry null");
-    sys_exit(-1);
+  else {
+    e = hash_entry(elem, struct spte, hash_elem);
+    if (e == NULL) {
+      //printf("load_page hash entry null");
+      sys_exit(-1);
+    }
   }
 
   kpage = falloc_get_page(PAL_USER, upage);

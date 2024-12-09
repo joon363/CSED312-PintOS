@@ -484,7 +484,7 @@ sys_munmap (mapid_t mapping)
 {
   struct thread *t = thread_current();
   struct mmap_file *mmf = get_mmf(t, mapping);
-  if(mmf==NULL) return -1;
+  if(mmf==NULL) return; // invalid mapping id
   lock_acquire (&file_lock);
 
   off_t ofs;
