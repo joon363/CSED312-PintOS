@@ -1,4 +1,4 @@
-# CSED312 Operating Systems Projects
+# CSED312 Operating Systems PintOS Project
 ## Results
 ```
 pass tests/userprog/args-none
